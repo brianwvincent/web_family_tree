@@ -30,7 +30,7 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
         const originalSvg = svgRef.current;
         const clonedSvg = originalSvg.cloneNode(true) as SVGSVGElement;
 
-        // Selectors for all visual elements in the tree
+        // Selectors for all visual elements we need to style
         const selectors = ['path.link', '.node circle', '.node text'];
 
         selectors.forEach(selector => {
@@ -42,25 +42,37 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
                 if (!clonedEl) return;
 
                 const computedStyle = window.getComputedStyle(originalEl);
-                let inlineStyle = '';
                 
-                // Robustly copy all computed styles to an inline style string
-                for (let i = 0; i < computedStyle.length; i++) {
-                    const prop = computedStyle[i];
-                    inlineStyle += `${prop}: ${computedStyle.getPropertyValue(prop)}; `;
-                }
-                
-                clonedEl.setAttribute('style', inlineStyle);
+                // --- Copy essential styles ---
+                // A targeted list of properties is more robust than copying all computed styles.
+                const stylePropsToCopy = [
+                    'fill', 'stroke', 'stroke-width', 'font-size', 'font-family',
+                    'font-weight', 'text-anchor', 'paint-order', 'stroke-linecap',
+                    'stroke-linejoin'
+                ];
 
+                let inlineStyle = '';
+                stylePropsToCopy.forEach(prop => {
+                    inlineStyle += `${prop}: ${computedStyle.getPropertyValue(prop)}; `;
+                });
+                clonedEl.setAttribute('style', inlineStyle);
+                
                 // --- Apply "Light Theme" Overrides for Export ---
                 if (clonedEl.tagName.toLowerCase() === 'text') {
                     clonedEl.style.fill = '#000000';
-                    clonedEl.style.stroke = '#ffffff'; // The text "halo" effect on a white background
+                    // For a white background, the "halo" stroke should be white
+                    clonedEl.style.stroke = '#ffffff';
+                    clonedEl.style.paintOrder = 'stroke';
+                    clonedEl.style.strokeWidth = '0.3em';
                 } else if (originalEl.matches('path.link')) {
                     clonedEl.style.stroke = '#555555'; // Dark grey for links
+                } else if (originalEl.matches('.node circle')) {
+                    clonedEl.style.fill = '#ffffff'; // White fill for nodes
+                    clonedEl.style.stroke = '#000000'; // Black stroke for nodes
+                    clonedEl.style.strokeWidth = '2';
                 }
                 
-                // Explicitly copy attributes that are not styles, like radius
+                // Explicitly copy attributes that are not styles but affect appearance
                 if (originalEl.tagName.toLowerCase() === 'circle') {
                     clonedEl.setAttribute('r', originalEl.getAttribute('r') || '6');
                 }
@@ -80,7 +92,7 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
         clonedSvg.setAttribute('viewBox', `${bbox.x - padding} ${bbox.y - padding} ${bbox.width + padding * 2} ${bbox.height + padding * 2}`);
         clonedSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
         
-        // Add a style tag for the white background and default font
+        // Add a style tag for the white background and default font. This is more reliable than direct styling.
         const style = document.createElement('style');
         style.textContent = `
             svg { background-color: #ffffff; }

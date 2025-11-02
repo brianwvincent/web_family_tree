@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AppNode, AppLink, FamilyTreeApi } from '../types';
+import { AppNode, AppLink, FamilyTreeApi, HierarchicalNode } from '../types';
 import CloseIcon from './icons/CloseIcon';
 import DownloadIcon from './icons/DownloadIcon';
 import SparklesIcon from './icons/SparklesIcon';
@@ -92,8 +92,41 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, nodes, links
   };
 
   const handlePreparePrompt = () => {
-    const roots = nodes.filter(n => !links.some(l => l.target.toLowerCase() === n.id.toLowerCase()));
-    const generatedPrompt = `Create an artistic and symbolic image representing a family tree with ${nodes.length} members. The founding members are ${roots.map(r => r.id).slice(0, 3).join(', ')}. The image should convey a sense of legacy, connection, and time. Use the visual metaphor of a sprawling, ancient tree with glowing patterns on its bark, under a celestial sky. Style: digital painting, epic, detailed, magical.`;
+    const nodeMap: { [key: string]: { name: string; children: any[] } } = {};
+    nodes.forEach(node => {
+        nodeMap[node.id] = { name: node.id, children: [] };
+    });
+
+    const childrenIds = new Set<string>();
+    links.forEach(link => {
+        if (nodeMap[link.source] && nodeMap[link.target]) {
+            nodeMap[link.source].children.push(nodeMap[link.target]);
+            childrenIds.add(link.target);
+        }
+    });
+
+    const roots = Object.values(nodeMap).filter(node => !childrenIds.has(node.name));
+
+    let treeJsonStructure: any;
+    if (roots.length === 0) {
+        treeJsonStructure = Object.keys(nodeMap).length > 0 ? Object.values(nodeMap)[0] : {};
+    } else if (roots.length > 1) {
+        treeJsonStructure = { name: "Family", children: roots };
+    } else {
+        treeJsonStructure = roots[0];
+    }
+
+    const replacer = (key: string, value: any) => (key === 'children' && Array.isArray(value) && value.length === 0) ? undefined : value;
+    const treeJsonString = JSON.stringify(treeJsonStructure, replacer, 2);
+
+    const generatedPrompt = `Create an artistic and symbolic image representing the following family tree structure:
+
+\`\`\`json
+${treeJsonString}
+\`\`\`
+
+The image should convey a sense of legacy, connection, and time. Use the visual metaphor of a sprawling, ancient tree with glowing patterns on its bark, under a celestial sky. The style should be digital painting, epic, detailed, and magical.`;
+    
     setPrompt(generatedPrompt);
     setView('prompt');
   }
@@ -146,8 +179,8 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, nodes, links
                     <textarea
                         value={prompt}
                         onChange={(e) => setPrompt(e.target.value)}
-                        rows={6}
-                        className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 transition text-sm"
+                        rows={10}
+                        className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 transition text-sm font-mono"
                     />
                     <div className="flex gap-3">
                       <button
