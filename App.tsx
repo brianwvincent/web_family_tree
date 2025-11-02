@@ -11,6 +11,7 @@ import LayoutControls from './components/LayoutControls';
 import ExportIcon from './components/icons/ExportIcon';
 import ExportModal from './components/ExportModal';
 import Logo from './components/icons/Logo';
+import Notification from './components/Notification';
 
 const App: React.FC = () => {
   const [view, setView] = useState<'landing' | 'tree'>('landing');
@@ -40,12 +41,15 @@ const App: React.FC = () => {
             setError("CSV must have a header row and at least one data row.");
             return;
         }
-        const header = rows[0].trim().toLowerCase().split(',').map(h => h.replace(/"/g, ''));
+        const header = rows[0].trim().toLowerCase().split(',').map(h => h.replace(/"/g, '').trim());
         const parentIndex = header.indexOf('parent');
         const childIndex = header.indexOf('child');
 
         if (parentIndex === -1 || childIndex === -1) {
-          setError('CSV must contain "parent" and "child" columns.');
+          const missingColumns = [];
+          if (parentIndex === -1) missingColumns.push('"parent"');
+          if (childIndex === -1) missingColumns.push('"child"');
+          setError(`Improperly formatted CSV: Missing required column(s): ${missingColumns.join(' and ')}. The CSV must have both "parent" and "child" columns.`);
           return;
         }
 
@@ -258,7 +262,7 @@ const App: React.FC = () => {
   }, [nodes, links]);
 
   if (view === 'landing') {
-    return <AppStartPage onFileUpload={handleFileUpload} onStartManual={handleStartManualAdd} />;
+    return <AppStartPage onFileUpload={handleFileUpload} onStartManual={handleStartManualAdd} error={error} />;
   }
 
   return (
@@ -313,7 +317,15 @@ const App: React.FC = () => {
               onManualAdd={handleManualAdd}
               isTreeVisible={nodes.length > 0}
           />
-          {error && <div className="mt-4 p-3 bg-red-800/50 text-red-300 border border-red-700/50 rounded-lg text-sm">{error}</div>}
+          {error && (
+            <div className="mt-4">
+              <Notification 
+                message={error} 
+                type="error" 
+                onClose={() => setError(null)} 
+              />
+            </div>
+          )}
           <NodeInfo 
               selectedNodeId={selectedNode}
               links={links}

@@ -1,14 +1,18 @@
 import React, { useRef } from 'react';
+import TreeIcon from './icons/TreeIcon';
 import UploadIcon from './icons/UploadIcon';
 import AddIcon from './icons/AddIcon';
+import DownloadIcon from './icons/DownloadIcon';
+import Notification from './Notification';
 import Logo from './icons/Logo';
 
 interface AppStartPageProps {
   onFileUpload: (file: File) => void;
   onStartManual: () => void;
+  error?: string | null;
 }
 
-const AppStartPage: React.FC<AppStartPageProps> = ({ onFileUpload, onStartManual }) => {
+const AppStartPage: React.FC<AppStartPageProps> = ({ onFileUpload, onStartManual, error }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -82,6 +86,12 @@ John and Christina,David`;
           <span className="text-xl font-semibold">Add Members Manually</span>
         </button>
       </main>
+
+      {error && (
+        <div className="mt-8 w-full max-w-2xl">
+          <Notification message={error} type="error" />
+        </div>
+      )}
 
       <section className="mt-12 w-full max-w-2xl text-left bg-gray-800/40 p-6 rounded-lg border border-gray-700/50">
         <h2 className="text-xl font-semibold text-center text-gray-200 mb-4">CSV File Format Guide</h2>
