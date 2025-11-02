@@ -201,7 +201,12 @@ The image should convey a sense of legacy, connection, and time. Use the visual 
     setApiError(null);
     
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const apiKey = process.env.API_KEY;
+        if (!apiKey) {
+            throw new Error("API key is not configured. Please set GEMINI_API_KEY in your .env file and rebuild.");
+        }
+
+        const ai = new GoogleGenAI({ apiKey });
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash-image',
             contents: {
@@ -230,8 +235,9 @@ The image should convey a sense of legacy, connection, and time. Use the visual 
             throw new Error("API returned no images.");
         }
     } catch (e) {
-        console.error(e);
-        setApiError('Failed to generate image. Please try again.');
+        console.error("AI Image Generation Error:", e);
+        const errorMessage = e?.message || 'An unknown error occurred. Please check the console for details.';
+        setApiError(`Failed to generate image: ${errorMessage}`);
         setView('error');
     }
   };
