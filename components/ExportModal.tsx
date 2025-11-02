@@ -13,12 +13,13 @@ interface ExportModalProps {
   familyTreeRef: React.RefObject<FamilyTreeApi>;
 }
 
-type View = 'options' | 'loading' | 'result' | 'error';
+type View = 'options' | 'prompt' | 'loading' | 'result' | 'error';
 
 const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, nodes, links, familyTreeRef }) => {
   const [view, setView] = useState<View>('options');
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [prompt, setPrompt] = useState('');
 
   if (!isOpen) return null;
 
@@ -29,6 +30,7 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, nodes, links
         setView('options');
         setGeneratedImage(null);
         setApiError(null);
+        setPrompt('');
     }, 300);
   };
   
@@ -89,12 +91,16 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, nodes, links
     }
   };
 
+  const handlePreparePrompt = () => {
+    const roots = nodes.filter(n => !links.some(l => l.target.toLowerCase() === n.id.toLowerCase()));
+    const generatedPrompt = `Create an artistic and symbolic image representing a family tree with ${nodes.length} members. The founding members are ${roots.map(r => r.id).slice(0, 3).join(', ')}. The image should convey a sense of legacy, connection, and time. Use the visual metaphor of a sprawling, ancient tree with glowing patterns on its bark, under a celestial sky. Style: digital painting, epic, detailed, magical.`;
+    setPrompt(generatedPrompt);
+    setView('prompt');
+  }
+
   const handleGenerateImage = async () => {
     setView('loading');
     setApiError(null);
-
-    const roots = nodes.filter(n => !links.some(l => l.target.toLowerCase() === n.id.toLowerCase()));
-    const prompt = `Create an artistic and symbolic image representing a family tree with ${nodes.length} members. The founding members are ${roots.map(r => r.id).slice(0, 3).join(', ')}. The image should convey a sense of legacy, connection, and time. Use the visual metaphor of a sprawling, ancient tree with glowing patterns on its bark, under a celestial sky. Style: digital painting, epic, detailed, magical.`;
     
     try {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -131,6 +137,36 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, nodes, links
 
   const renderContent = () => {
     switch(view) {
+        case 'prompt':
+            return (
+                <div className="space-y-4">
+                    <p className="text-gray-400">
+                        Edit the prompt below to customize the AI-generated image.
+                    </p>
+                    <textarea
+                        value={prompt}
+                        onChange={(e) => setPrompt(e.target.value)}
+                        rows={6}
+                        className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 transition text-sm"
+                    />
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setView('options')}
+                        className="w-full flex items-center justify-center px-4 py-3 bg-gray-600/80 hover:bg-gray-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
+                      >
+                        Back
+                      </button>
+                      <button
+                        onClick={handleGenerateImage}
+                        disabled={!prompt.trim()}
+                        className="w-full flex items-center justify-center px-4 py-3 bg-amber-600/80 hover:bg-amber-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300 disabled:bg-gray-600/50 disabled:cursor-not-allowed"
+                      >
+                        <SparklesIcon className="w-5 h-5 mr-2" />
+                        Generate
+                      </button>
+                    </div>
+                </div>
+            )
         case 'loading':
             return (
                 <div className="text-center py-12">
@@ -165,10 +201,10 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, nodes, links
                 <div className="text-center py-12 space-y-4">
                     <p className="text-red-400">{apiError}</p>
                     <button
-                        onClick={() => setView('options')}
+                        onClick={() => setView('prompt')}
                         className="px-4 py-2 bg-gray-600/80 hover:bg-gray-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
                       >
-                        Back to Options
+                        Back to Prompt
                       </button>
                 </div>
             )
@@ -202,7 +238,7 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, nodes, links
                   </button>
                   <div className="border-t border-gray-700/50 my-2"></div>
                   <button
-                    onClick={handleGenerateImage}
+                    onClick={handlePreparePrompt}
                     className="w-full flex items-center justify-center px-4 py-3 bg-amber-600/80 hover:bg-amber-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
                   >
                     <SparklesIcon className="w-5 h-5 mr-2" />
