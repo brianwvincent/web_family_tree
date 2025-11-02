@@ -78,16 +78,6 @@ const Controls: React.FC<ControlsProps> = ({
               required
             />
             <div className="flex flex-col sm:flex-row gap-3">
-              <button 
-                type="button" 
-                onClick={() => handleAddRelationship('child')}
-                disabled={!memberName.trim()}
-                className="w-full flex items-center justify-center px-4 py-2 bg-indigo-600/80 hover:bg-indigo-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-opacity-75 disabled:bg-gray-600/50 disabled:cursor-not-allowed"
-              >
-                <AddIcon className="w-5 h-5 mr-2" />
-                Add as Child
-              </button>
-
               {!selectedNodeHasParent && (
                 <button 
                   type="button" 
@@ -99,6 +89,16 @@ const Controls: React.FC<ControlsProps> = ({
                   Add as Parent
                 </button>
               )}
+
+              <button 
+                type="button" 
+                onClick={() => handleAddRelationship('child')}
+                disabled={!memberName.trim()}
+                className="w-full flex items-center justify-center px-4 py-2 bg-indigo-600/80 hover:bg-indigo-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-opacity-75 disabled:bg-gray-600/50 disabled:cursor-not-allowed"
+              >
+                <AddIcon className="w-5 h-5 mr-2" />
+                Add as Child
+              </button>
             </div>
           </form>
         </div>

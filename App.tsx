@@ -167,6 +167,36 @@ const App: React.FC = () => {
     }
   }, []);
 
+  const handleNodeNameChange = useCallback((oldName: string, newName: string) => {
+    const trimmedNewName = newName.trim();
+    if (!trimmedNewName) {
+        setError("Member name cannot be empty.");
+        return;
+    }
+    if (trimmedNewName.toLowerCase() === oldName.toLowerCase()) {
+        return; // No change, just silently ignore.
+    }
+    if (nodes.some(n => n.id.toLowerCase() === trimmedNewName.toLowerCase())) {
+        setError("A member with this name already exists.");
+        return;
+    }
+    setError(null);
+
+    const newNodes = nodes.map(node => 
+        node.id === oldName ? { ...node, id: trimmedNewName } : node
+    );
+
+    const newLinks = links.map(link => ({
+        source: link.source === oldName ? trimmedNewName : link.source,
+        target: link.target === oldName ? trimmedNewName : link.target,
+    }));
+
+    setNodes(newNodes);
+    setLinks(newLinks);
+    setSelectedNode(trimmedNewName); // Update selection to the new name
+
+  }, [nodes, links]);
+
   const selectedNodeHasParent = useMemo(() => {
     if (!selectedNode) return false;
     return links.some(link => link.target.toLowerCase() === selectedNode.toLowerCase());
@@ -249,13 +279,14 @@ const App: React.FC = () => {
             selectedNodeId={selectedNode}
             links={links}
             onDeselect={() => handleNodeSelect(null)}
+            onNodeNameChange={handleNodeNameChange}
         />
          <div className="mt-8 p-4 bg-gray-800/30 border border-gray-700/50 rounded-lg text-sm text-gray-400">
             <h3 className="font-semibold text-gray-200 mb-2">How to Use:</h3>
             <ul className="list-disc list-inside space-y-1">
-                <li><span className="font-semibold">Select a Node:</span> Click a member in the tree to view their details here.</li>
-                <li><span className="font-semibold">Search:</span> Find a family member in the tree.</li>
-                <li><span className="font-semibold">Upload CSV:</span> Must have 'parent' & 'child' columns.</li>
+                <li><span className="font-semibold">View Details:</span> Click a member to see their parent and children.</li>
+                <li><span className="font-semibold">Edit Name:</span> Change a member's name in the details panel.</li>
+                <li><span className="font-semibold">Search:</span> Find a family member using the search bar.</li>
                 <li><span className="font-semibold">Interact:</span> Pan and zoom the tree visualization.</li>
             </ul>
         </div>

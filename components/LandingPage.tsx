@@ -23,7 +23,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onFileUpload, onStartManual }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-gray-900 text-gray-100 font-sans p-4">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-gray-100 font-sans p-4 py-12">
       <header className="text-center">
         <TreeIcon className="w-20 h-20 text-emerald-400 mx-auto mb-4" />
         <h1 className="text-4xl md:text-5xl font-bold text-white">Family Tree Builder</h1>
@@ -48,9 +48,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onFileUpload, onStartManual }
             <UploadIcon className="w-10 h-10 mb-3" />
             <span className="text-xl font-semibold">Upload CSV File</span>
           </button>
-          <p className="mt-2 text-xs text-gray-500 text-center w-64">
-            File must be a CSV with "parent" and "child" columns.
-          </p>
         </div>
         <button
           onClick={onStartManual}
@@ -61,7 +58,24 @@ const LandingPage: React.FC<LandingPageProps> = ({ onFileUpload, onStartManual }
         </button>
       </main>
 
-      <footer className="absolute bottom-6 text-center text-gray-500 text-sm">
+      <section className="mt-12 w-full max-w-2xl text-left bg-gray-800/40 p-6 rounded-lg border border-gray-700/50">
+        <h2 className="text-xl font-semibold text-center text-gray-200 mb-4">CSV File Format Guide</h2>
+        <p className="text-gray-400 mb-4">
+          To upload your family tree, the CSV file must contain exactly two columns with the headers <code className="bg-gray-700 text-emerald-300 px-1 py-0.5 rounded text-sm">parent</code> and <code className="bg-gray-700 text-emerald-300 px-1 py-0.5 rounded text-sm">child</code>. Each row represents a direct relationship.
+        </p>
+        <p className="text-gray-400 mb-2 font-semibold">Example:</p>
+        <pre className="bg-gray-900/70 p-4 rounded-md text-gray-300 text-sm overflow-x-auto">
+          <code>
+{`parent,child
+Grandfather,Father
+Grandmother,Father
+Father,Son
+Father,Daughter`}
+          </code>
+        </pre>
+      </section>
+
+      <footer className="mt-12 text-center text-gray-500 text-sm">
         <p>An interactive way to explore your family history.</p>
       </footer>
     </div>
