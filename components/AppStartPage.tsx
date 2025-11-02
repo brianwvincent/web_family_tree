@@ -22,6 +22,25 @@ const AppStartPage: React.FC<AppStartPageProps> = ({ onFileUpload, onStartManual
     fileInputRef.current?.click();
   };
 
+  const handleDownloadTemplate = () => {
+    const csvContent = `parent,child
+Grandmother,Father and Mother
+Father and Mother,John and Christina
+Father and Mother,Sally
+John and Christina,Michelle
+John and Christina,David`;
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'family-tree-template.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-gray-100 font-sans p-4 py-12">
       <header className="text-center">
@@ -72,13 +91,23 @@ const AppStartPage: React.FC<AppStartPageProps> = ({ onFileUpload, onStartManual
         <p className="text-gray-400 mb-2 font-semibold">Example:</p>
         <pre className="bg-gray-900/70 p-4 rounded-md text-gray-300 text-sm overflow-x-auto">
           <code>
-{`parent,child
-Grandfather,Father
-Grandmother,Father
-Father,Son
-Father,Daughter`}
+            {`parent,child
+Grandmother,Father and Mother
+Father and Mother,John and Christina
+Father and Mother,Sally
+John and Christina,Michelle
+John and Christina,David`}
           </code>
         </pre>
+        <div className="mt-4 text-center">
+          <button
+            onClick={handleDownloadTemplate}
+            className="inline-flex items-center px-4 py-2 bg-emerald-600/80 hover:bg-emerald-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
+          >
+            <UploadIcon className="w-5 h-5 mr-2 transform rotate-180" />
+            Download CSV Template
+          </button>
+        </div>
       </section>
 
       <footer className="mt-12 text-center text-gray-500 text-sm">

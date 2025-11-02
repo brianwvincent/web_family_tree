@@ -307,6 +307,7 @@ const App: React.FC = () => {
               onNodeNameChange={handleNodeNameChange}
               onManualAdd={handleManualAdd}
               selectedNodeHasParent={selectedNodeHasParent}
+              onNodeSelect={handleNodeSelect}
           />
           {nodes.length > 0 && (
             <>

@@ -10,6 +10,7 @@ interface NodeInfoProps {
   onNodeNameChange: (oldName: string, newName: string) => void;
   onManualAdd: (name: string, relationshipType?: 'parent' | 'child') => void;
   selectedNodeHasParent: boolean;
+  onNodeSelect?: (nodeId: string) => void;
 }
 
 const NodeInfo: React.FC<NodeInfoProps> = ({ 
@@ -18,7 +19,8 @@ const NodeInfo: React.FC<NodeInfoProps> = ({
   onDeselect, 
   onNodeNameChange,
   onManualAdd,
-  selectedNodeHasParent
+  selectedNodeHasParent,
+  onNodeSelect
 }) => {
   const [editedName, setEditedName] = useState(selectedNodeId || '');
   const [memberName, setMemberName] = useState('');
@@ -92,13 +94,35 @@ const NodeInfo: React.FC<NodeInfoProps> = ({
         <div className="border-t border-gray-700/50 pt-3 space-y-3">
           <div>
             <p className="font-semibold text-gray-400">Parent:</p>
-            <p className="pl-2 text-white">{parent}</p>
+            {parent !== 'N/A' && onNodeSelect ? (
+              <button
+                onClick={() => onNodeSelect(parent)}
+                className="pl-2 text-purple-400 hover:text-purple-300 underline cursor-pointer transition-colors"
+              >
+                {parent}
+              </button>
+            ) : (
+              <p className="pl-2 text-white">{parent}</p>
+            )}
           </div>
           <div>
             <p className="font-semibold text-gray-400">Children:</p>
             {children.length > 0 ? (
-              <ul className="list-disc list-inside pl-2 text-white">
-                {children.map(child => <li key={child}>{child}</li>)}
+              <ul className="list-disc list-inside pl-2">
+                {children.map(child => (
+                  <li key={child}>
+                    {onNodeSelect ? (
+                      <button
+                        onClick={() => onNodeSelect(child)}
+                        className="text-purple-400 hover:text-purple-300 underline cursor-pointer transition-colors"
+                      >
+                        {child}
+                      </button>
+                    ) : (
+                      <span className="text-white">{child}</span>
+                    )}
+                  </li>
+                ))}
               </ul>
             ) : (
               <p className="pl-2">None</p>
