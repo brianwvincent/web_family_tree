@@ -4,6 +4,7 @@ import CloseIcon from './icons/CloseIcon';
 import DownloadIcon from './icons/DownloadIcon';
 import SparklesIcon from './icons/SparklesIcon';
 import { GoogleGenAI, Modality } from "@google/genai";
+import { jsPDF } from 'jspdf';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -150,6 +151,45 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, nodes, links
       };
       img.onerror = () => {
         console.error("Error loading SVG image for PNG conversion.");
+        URL.revokeObjectURL(url);
+      };
+      img.src = url;
+    }
+  };
+
+  const handleDownloadPDF = () => {
+    const svgData = familyTreeRef.current?.getSVGData();
+    if (svgData) {
+      const { svgString, width, height } = svgData;
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      const img = new Image();
+      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, width, height);
+        URL.revokeObjectURL(url);
+        
+        // Convert canvas to image data
+        const imgData = canvas.toDataURL('image/png');
+        
+        // Create PDF with appropriate dimensions
+        const pdf = new jsPDF({
+          orientation: width > height ? 'landscape' : 'portrait',
+          unit: 'px',
+          format: [width, height]
+        });
+        
+        pdf.addImage(imgData, 'PNG', 0, 0, width, height);
+        pdf.save('family-tree.pdf');
+      };
+      img.onerror = () => {
+        console.error("Error loading SVG image for PDF conversion.");
         URL.revokeObjectURL(url);
       };
       img.src = url;
@@ -357,6 +397,13 @@ The image should convey a sense of legacy, connection, and time. Use the visual 
                     >
                       <DownloadIcon className="w-5 h-5 mr-2" />
                       PNG
+                    </button>
+                    <button
+                      onClick={handleDownloadPDF}
+                      className="flex items-center justify-center px-4 py-3 bg-red-600/80 hover:bg-red-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
+                    >
+                      <DownloadIcon className="w-5 h-5 mr-2" />
+                      PDF
                     </button>
                   </div>
                   <div className="border-t border-gray-700/50 my-2"></div>
