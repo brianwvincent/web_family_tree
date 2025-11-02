@@ -25,88 +25,78 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
 
   useImperativeHandle(ref, () => ({
     getSVGData: () => {
-        if (!svgRef.current) return null;
+      if (!svgRef.current) return null;
 
-        const originalSvg = svgRef.current;
-        const clonedSvg = originalSvg.cloneNode(true) as SVGSVGElement;
-
-        // Selectors for all visual elements we need to style
-        const selectors = ['path.link', '.node circle', '.node text'];
-
-        selectors.forEach(selector => {
-            const originalElements = Array.from(originalSvg.querySelectorAll(selector));
-            const clonedElements = Array.from(clonedSvg.querySelectorAll(selector));
-
-            originalElements.forEach((originalEl, i) => {
-                const clonedEl = clonedElements[i] as HTMLElement;
-                if (!clonedEl) return;
-
-                const computedStyle = window.getComputedStyle(originalEl);
-                
-                // --- Copy essential styles ---
-                // A targeted list of properties is more robust than copying all computed styles.
-                const stylePropsToCopy = [
-                    'fill', 'stroke', 'stroke-width', 'font-size', 'font-family',
-                    'font-weight', 'text-anchor', 'paint-order', 'stroke-linecap',
-                    'stroke-linejoin'
-                ];
-
-                let inlineStyle = '';
-                stylePropsToCopy.forEach(prop => {
-                    inlineStyle += `${prop}: ${computedStyle.getPropertyValue(prop)}; `;
-                });
-                clonedEl.setAttribute('style', inlineStyle);
-                
-                // --- Apply "Light Theme" Overrides for Export ---
-                if (clonedEl.tagName.toLowerCase() === 'text') {
-                    clonedEl.style.fill = '#000000';
-                    // For a white background, the "halo" stroke should be white
-                    clonedEl.style.stroke = '#ffffff';
-                    clonedEl.style.paintOrder = 'stroke';
-                    clonedEl.style.strokeWidth = '0.3em';
-                } else if (originalEl.matches('path.link')) {
-                    clonedEl.style.stroke = '#555555'; // Dark grey for links
-                } else if (originalEl.matches('.node circle')) {
-                    clonedEl.style.fill = '#ffffff'; // White fill for nodes
-                    clonedEl.style.stroke = '#000000'; // Black stroke for nodes
-                    clonedEl.style.strokeWidth = '2';
-                }
-                
-                // Explicitly copy attributes that are not styles but affect appearance
-                if (originalEl.tagName.toLowerCase() === 'circle') {
-                    clonedEl.setAttribute('r', originalEl.getAttribute('r') || '6');
-                }
-            });
-        });
-
-        // Remove the zoom/pan transform from the main group to calculate its natural size
-        const g = clonedSvg.querySelector('g');
-        if (!g) return null;
-        g.setAttribute('transform', '');
-
-        const bbox = g.getBBox();
-        const padding = 40;
-
-        clonedSvg.setAttribute('width', `${bbox.width + padding * 2}`);
-        clonedSvg.setAttribute('height', `${bbox.height + padding * 2}`);
-        clonedSvg.setAttribute('viewBox', `${bbox.x - padding} ${bbox.y - padding} ${bbox.width + padding * 2} ${bbox.height + padding * 2}`);
-        clonedSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-        
-        // Add a style tag for the white background and default font. This is more reliable than direct styling.
-        const style = document.createElement('style');
-        style.textContent = `
-            svg { background-color: #ffffff; }
-            text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; }
-        `;
-        clonedSvg.prepend(style);
-
-        const svgString = new XMLSerializer().serializeToString(clonedSvg);
-
-        return {
-            svgString,
-            width: bbox.width + padding * 2,
-            height: bbox.height + padding * 2,
-        };
+      const originalSvg = svgRef.current;
+      const originalG = originalSvg.querySelector('g');
+  
+      // Step 1: Get the bounding box from the original, rendered <g> element.
+      // This is more reliable than measuring an off-screen clone.
+      if (!originalG) return null;
+      const bbox = originalG.getBBox();
+  
+      // If the graph is empty or not rendered, bbox will have 0 dimensions.
+      if (bbox.width === 0 || bbox.height === 0) {
+        console.error("Could not export SVG: bounding box has zero dimensions.");
+        return null;
+      }
+  
+      // Step 2: Clone the SVG node to modify it for export without affecting the live view.
+      const clonedSvg = originalSvg.cloneNode(true) as SVGSVGElement;
+      const g = clonedSvg.querySelector('g');
+      if (!g) return null;
+  
+      // Step 3: Reset the zoom/pan transform on the cloned group.
+      g.setAttribute('transform', '');
+  
+      // Step 4: Apply a consistent, light-themed style for the export.
+      // We explicitly set attributes to override any inline styles or CSS.
+      clonedSvg.querySelectorAll('.link').forEach(el => {
+          el.removeAttribute('style');
+          el.setAttribute('stroke', '#555555');
+          el.setAttribute('fill', 'none');
+          el.setAttribute('stroke-width', '1.5');
+      });
+      
+      clonedSvg.querySelectorAll('.node circle').forEach(el => {
+          el.removeAttribute('style');
+          el.setAttribute('fill', '#ffffff');
+          el.setAttribute('stroke', '#000000');
+          el.setAttribute('stroke-width', '2');
+      });
+  
+      clonedSvg.querySelectorAll('.node text').forEach(el => {
+          el.removeAttribute('style');
+          el.setAttribute('fill', '#000000');
+          // The dark stroke for text is good for the app's dark background,
+          // but not for a light export background.
+          el.setAttribute('stroke', 'none');
+      });
+      
+      const padding = 40;
+  
+      // Step 5: Add a white background rectangle.
+      const background = document.createElementNS("http://www.w3.org/2000/svg", 'rect');
+      background.setAttribute('x', `${bbox.x - padding}`);
+      background.setAttribute('y', `${bbox.y - padding}`);
+      background.setAttribute('width', `${bbox.width + padding * 2}`);
+      background.setAttribute('height', `${bbox.height + padding * 2}`);
+      background.setAttribute('fill', '#ffffff');
+      clonedSvg.prepend(background);
+      
+      // Step 6: Set final dimensions and viewBox on the SVG for proper scaling.
+      clonedSvg.setAttribute('width', `${bbox.width + padding * 2}`);
+      clonedSvg.setAttribute('height', `${bbox.height + padding * 2}`);
+      clonedSvg.setAttribute('viewBox', `${bbox.x - padding} ${bbox.y - padding} ${bbox.width + padding * 2} ${bbox.height + padding * 2}`);
+      clonedSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      
+      const svgString = new XMLSerializer().serializeToString(clonedSvg);
+  
+      return {
+          svgString,
+          width: bbox.width + padding * 2,
+          height: bbox.height + padding * 2,
+      };
     },
   }));
 
