@@ -8,6 +8,7 @@ import LandingPage from './components/LandingPage';
 import HomeIcon from './components/icons/HomeIcon';
 import SearchBar from './components/SearchBar';
 import ResetIcon from './components/icons/ResetIcon';
+import LayoutControls from './components/LayoutControls';
 
 const App: React.FC = () => {
   const [view, setView] = useState<'landing' | 'tree'>('landing');
@@ -16,6 +17,8 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
+  const [siblingSpacing, setSiblingSpacing] = useState(1);
+  const [generationSpacing, setGenerationSpacing] = useState(1);
 
   const handleFileUpload = useCallback((file: File) => {
     setError(null);
@@ -162,6 +165,8 @@ const App: React.FC = () => {
     setError(null);
     setSearchQuery('');
     setSelectedNode(null);
+    setSiblingSpacing(1);
+    setGenerationSpacing(1);
     if (returnToLanding) {
       setView('landing');
     }
@@ -281,6 +286,17 @@ const App: React.FC = () => {
             onDeselect={() => handleNodeSelect(null)}
             onNodeNameChange={handleNodeNameChange}
         />
+        {nodes.length > 0 && (
+          <>
+            <div className="border-t border-gray-700/50 my-6"></div>
+            <LayoutControls
+              siblingSpacing={siblingSpacing}
+              setSiblingSpacing={setSiblingSpacing}
+              generationSpacing={generationSpacing}
+              setGenerationSpacing={setGenerationSpacing}
+            />
+          </>
+        )}
          <div className="mt-8 p-4 bg-gray-800/30 border border-gray-700/50 rounded-lg text-sm text-gray-400">
             <h3 className="font-semibold text-gray-200 mb-2">How to Use:</h3>
             <ul className="list-disc list-inside space-y-1">
@@ -303,6 +319,8 @@ const App: React.FC = () => {
                 searchQuery={searchQuery}
                 selectedNode={selectedNode}
                 onNodeSelect={handleNodeSelect}
+                siblingSpacing={siblingSpacing}
+                generationSpacing={generationSpacing}
             />
           </>
         ) : (

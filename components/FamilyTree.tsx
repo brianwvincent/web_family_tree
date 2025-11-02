@@ -7,9 +7,18 @@ interface FamilyTreeProps {
   searchQuery: string;
   selectedNode: string | null;
   onNodeSelect: (nodeId: string | null) => void;
+  siblingSpacing: number;
+  generationSpacing: number;
 }
 
-const FamilyTree: React.FC<FamilyTreeProps> = ({ data, searchQuery, selectedNode, onNodeSelect }) => {
+const FamilyTree: React.FC<FamilyTreeProps> = ({ 
+  data, 
+  searchQuery, 
+  selectedNode, 
+  onNodeSelect,
+  siblingSpacing,
+  generationSpacing,
+}) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -52,6 +61,12 @@ const FamilyTree: React.FC<FamilyTreeProps> = ({ data, searchQuery, selectedNode
     
     treeLayout(root);
 
+    // Apply custom spacing by scaling coordinates
+    root.each(d => {
+      d.x *= siblingSpacing;
+      d.y *= generationSpacing;
+    });
+
     const zoom = d3.zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.1, 3])
       .on("zoom", (event) => {
@@ -60,7 +75,10 @@ const FamilyTree: React.FC<FamilyTreeProps> = ({ data, searchQuery, selectedNode
 
     svg.call(zoom);
     
-    const initialTransform = d3.zoomIdentity.translate(margin.left, margin.top).scale(0.8);
+    // Adjust initial zoom based on spacing
+    const scaleFactor = Math.max(siblingSpacing, generationSpacing, 1);
+    const initialScale = 0.8 / scaleFactor;
+    const initialTransform = d3.zoomIdentity.translate(margin.left, margin.top).scale(initialScale);
     svg.call(zoom.transform, initialTransform);
 
     const linkGenerator = d3.linkHorizontal<d3.HierarchyPointLink<HierarchicalNode>, d3.HierarchyPointNode<HierarchicalNode>>()
@@ -129,7 +147,7 @@ const FamilyTree: React.FC<FamilyTreeProps> = ({ data, searchQuery, selectedNode
       .delay((d,i) => i * 10)
       .attr("opacity", 1);
       
-  }, [data, dimensions, onNodeSelect]);
+  }, [data, dimensions, onNodeSelect, siblingSpacing, generationSpacing]);
 
   // Effect for updating styles on search or selection change
   useEffect(() => {
