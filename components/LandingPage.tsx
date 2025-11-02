@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
-import TreeIcon from './icons/TreeIcon';
 import UploadIcon from './icons/UploadIcon';
 import AddIcon from './icons/AddIcon';
+import Logo from './icons/Logo';
 
 interface LandingPageProps {
   onFileUpload: (file: File) => void;
@@ -25,10 +25,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ onFileUpload, onStartManual }
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-gray-100 font-sans p-4 py-12">
       <header className="text-center">
-        <TreeIcon className="w-20 h-20 text-emerald-400 mx-auto mb-4" />
-        <h1 className="text-4xl md:text-5xl font-bold text-white">Family Tree Builder</h1>
-        <p className="mt-3 text-lg text-gray-400 max-w-2xl">
-          Visualize your heritage. Start by uploading a CSV or add your family members one by one.
+        <Logo className="w-32 h-32 mx-auto" />
+        <h1 className="text-4xl md:text-5xl font-bold text-white tracking-wider uppercase mt-4">HeirGraph</h1>
+        <p className="mt-2 text-xl md:text-2xl text-[#E6B33D]" style={{ fontFamily: "'Cursive', 'Brush Script MT', sans-serif" }}>
+            Ancestral Graphs
+        </p>
+        <p className="mt-6 text-xl md:text-2xl font-light text-gray-300 max-w-3xl mx-auto">
+          An interactive way to explore your family history.
+        </p>
+        <p className="mt-2 text-lg text-gray-400 max-w-2xl">
+          Visualize your heritage by uploading a CSV or adding members one by one.
         </p>
       </header>
 
@@ -76,7 +82,9 @@ Father,Daughter`}
       </section>
 
       <footer className="mt-12 text-center text-gray-500 text-sm">
-        <p>An interactive way to explore your family history.</p>
+        <p>
+            Powered by <a href="https://VincentAnalytica.com" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300 transition-colors">VincentAnalytica.com</a>
+        </p>
       </footer>
     </div>
   );

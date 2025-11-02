@@ -51,6 +51,71 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, nodes, links
     const blob = new Blob([header + csvContent], { type: 'text/csv;charset=utf-8;' });
     downloadFile(blob, 'family-tree.csv');
   };
+  
+  const handleDownloadGEDCOM = () => {
+    if (nodes.length === 0) return;
+
+    let gedcomContent = '0 HEAD\n1 SOUR HeirGraph\n1 GEDC\n2 VERS 5.5.1\n2 FORM LINEAGE-LINKED\n1 CHAR UTF-8\n';
+    
+    const nameToIndiId: Record<string, string> = {};
+    let indiCounter = 1;
+    nodes.forEach(node => {
+        nameToIndiId[node.id] = `@I${indiCounter++}@`;
+    });
+
+    const childToFamId: Record<string, string> = {};
+    const parentToFamIds: Record<string, string[]> = {};
+    const families: Record<string, { parent: string; children: string[] }> = {};
+
+    links.forEach(link => {
+        if (!families[link.source]) {
+            families[link.source] = { parent: link.source, children: [] };
+        }
+        families[link.source].children.push(link.target);
+    });
+
+    let famCounter = 1;
+    const famGedcomStrings: string[] = [];
+
+    Object.values(families).forEach(family => {
+        const famId = `@F${famCounter++}@`;
+        
+        if (!parentToFamIds[family.parent]) {
+            parentToFamIds[family.parent] = [];
+        }
+        parentToFamIds[family.parent].push(famId);
+        
+        let famString = `0 ${famId} FAM\n`;
+        family.children.forEach(childName => {
+            const childIndiId = nameToIndiId[childName];
+            famString += `1 CHIL ${childIndiId}\n`;
+            childToFamId[childName] = famId;
+        });
+        famGedcomStrings.push(famString.trim());
+    });
+
+    const indiGedcomStrings: string[] = [];
+    nodes.forEach(node => {
+        const indiId = nameToIndiId[node.id];
+        let indiString = `0 ${indiId} INDI\n1 NAME ${node.id}\n`;
+        if (childToFamId[node.id]) {
+            indiString += `1 FAMC ${childToFamId[node.id]}\n`;
+        }
+        if (parentToFamIds[node.id]) {
+            parentToFamIds[node.id].forEach(famId => {
+                indiString += `1 FAMS ${famId}\n`;
+            });
+        }
+        indiGedcomStrings.push(indiString.trim());
+    });
+
+    gedcomContent += indiGedcomStrings.join('\n') + '\n';
+    gedcomContent += famGedcomStrings.join('\n') + '\n';
+    gedcomContent += '0 TRLR';
+
+    const blob = new Blob([gedcomContent], { type: 'application/gedcom;charset=utf-8;' });
+    downloadFile(blob, 'family-tree.ged');
+  };
 
   const handleDownloadSVG = () => {
     const svgData = familyTreeRef.current?.getSVGData();
@@ -258,27 +323,36 @@ The image should convey a sense of legacy, connection, and time. Use the visual 
                   <p className="text-gray-400">
                     Download your family tree for sharing or archiving, or create a unique AI-generated image.
                   </p>
-                  <button
-                    onClick={handleDownloadCSV}
-                    className="w-full flex items-center justify-center px-4 py-3 bg-emerald-600/80 hover:bg-emerald-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
-                  >
-                    <DownloadIcon className="w-5 h-5 mr-2" />
-                    Download as CSV
-                  </button>
-                  <button
-                    onClick={handleDownloadSVG}
-                    className="w-full flex items-center justify-center px-4 py-3 bg-sky-600/80 hover:bg-sky-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
-                  >
-                    <DownloadIcon className="w-5 h-5 mr-2" />
-                    Download as SVG
-                  </button>
-                  <button
-                    onClick={handleDownloadPNG}
-                    className="w-full flex items-center justify-center px-4 py-3 bg-purple-600/80 hover:bg-purple-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
-                  >
-                    <DownloadIcon className="w-5 h-5 mr-2" />
-                    Download as PNG
-                  </button>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={handleDownloadCSV}
+                      className="flex items-center justify-center px-4 py-3 bg-emerald-600/80 hover:bg-emerald-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
+                    >
+                      <DownloadIcon className="w-5 h-5 mr-2" />
+                      CSV
+                    </button>
+                    <button
+                      onClick={handleDownloadGEDCOM}
+                      className="flex items-center justify-center px-4 py-3 bg-orange-600/80 hover:bg-orange-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
+                    >
+                      <DownloadIcon className="w-5 h-5 mr-2" />
+                      GEDCOM
+                    </button>
+                    <button
+                      onClick={handleDownloadSVG}
+                      className="flex items-center justify-center px-4 py-3 bg-sky-600/80 hover:bg-sky-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
+                    >
+                      <DownloadIcon className="w-5 h-5 mr-2" />
+                      SVG
+                    </button>
+                    <button
+                      onClick={handleDownloadPNG}
+                      className="flex items-center justify-center px-4 py-3 bg-purple-600/80 hover:bg-purple-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
+                    >
+                      <DownloadIcon className="w-5 h-5 mr-2" />
+                      PNG
+                    </button>
+                  </div>
                   <div className="border-t border-gray-700/50 my-2"></div>
                   <button
                     onClick={handlePreparePrompt}
@@ -302,7 +376,7 @@ The image should convey a sense of legacy, connection, and time. Use the visual 
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-white">Export & Generate</h2>
+          <h2 className="text-2xl font-bold text-white">Export &amp; Generate</h2>
           <button
             onClick={handleClose}
             className="p-1 rounded-full text-gray-500 hover:bg-gray-700 hover:text-white transition-colors"

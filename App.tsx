@@ -2,7 +2,6 @@ import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { AppNode, AppLink, HierarchicalNode, FamilyTreeApi } from './types';
 import FamilyTree from './components/FamilyTree';
 import Controls from './components/Controls';
-import TreeIcon from './components/icons/TreeIcon';
 import NodeInfo from './components/NodeInfo';
 import LandingPage from './components/LandingPage';
 import HomeIcon from './components/icons/HomeIcon';
@@ -11,6 +10,7 @@ import ResetIcon from './components/icons/ResetIcon';
 import LayoutControls from './components/LayoutControls';
 import ExportIcon from './components/icons/ExportIcon';
 import ExportModal from './components/ExportModal';
+import Logo from './components/icons/Logo';
 
 const App: React.FC = () => {
   const [view, setView] = useState<'landing' | 'tree'>('landing');
@@ -260,8 +260,8 @@ const App: React.FC = () => {
         <aside className="w-full md:w-80 lg:w-96 bg-gray-800/50 p-6 border-b md:border-b-0 md:border-r border-gray-700/50 shadow-lg flex-shrink-0 overflow-y-auto">
           <header className="flex items-center justify-between mb-8">
             <div className="flex items-center">
-              <TreeIcon className="w-8 h-8 text-emerald-400" />
-              <h1 className="text-2xl font-bold ml-3 text-white">Family Tree Builder</h1>
+              <Logo className="w-10 h-10" />
+              <h1 className="text-2xl font-bold ml-2 text-white">HeirGraph</h1>
             </div>
             <div className="flex items-center gap-1">
               {nodes.length > 0 && (
@@ -298,8 +298,6 @@ const App: React.FC = () => {
               onFileUpload={handleFileUpload}
               onManualAdd={handleManualAdd}
               isTreeVisible={nodes.length > 0}
-              selectedNode={selectedNode}
-              selectedNodeHasParent={selectedNodeHasParent}
           />
           {error && <div className="mt-4 p-3 bg-red-800/50 text-red-300 border border-red-700/50 rounded-lg text-sm">{error}</div>}
           <NodeInfo 
@@ -307,6 +305,8 @@ const App: React.FC = () => {
               links={links}
               onDeselect={() => handleNodeSelect(null)}
               onNodeNameChange={handleNodeNameChange}
+              onManualAdd={handleManualAdd}
+              selectedNodeHasParent={selectedNodeHasParent}
           />
           {nodes.length > 0 && (
             <>
@@ -348,7 +348,7 @@ const App: React.FC = () => {
             </>
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 p-8">
-                  <TreeIcon className="w-24 h-24 mb-6 opacity-20" />
+                  <Logo className="w-32 h-32 mb-6 opacity-20" />
                   <h2 className="text-2xl font-semibold text-gray-400">Your Family Tree Awaits</h2>
                   <p className="mt-2 max-w-md">Get started by adding a family member or uploading a CSV file using the controls on the left.</p>
               </div>

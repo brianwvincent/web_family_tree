@@ -1,5 +1,5 @@
 {
-  "name": "Family Tree Visualizer",
-  "description": "An interactive application to build and visualize family trees. Users can either upload a CSV file with parent-child relationships or manually add family members to dynamically generate a beautiful tree diagram.",
+  "name": "HeirGraph",
+  "description": "An interactive application to build and visualize family trees with HeirGraph. Users can either upload a CSV file with parent-child relationships or manually add family members to dynamically generate a beautiful tree diagram.",
   "requestFramePermissions": []
 }
