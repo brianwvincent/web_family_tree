@@ -206,6 +206,20 @@ const App: React.FC = () => {
 
   }, [nodes, links]);
 
+  const handleNodeDelete = useCallback((nodeId: string) => {
+    setError(null);
+    
+    // Remove the node
+    const newNodes = nodes.filter(node => node.id !== nodeId);
+    
+    // Remove all links involving this node
+    const newLinks = links.filter(link => link.source !== nodeId && link.target !== nodeId);
+    
+    setNodes(newNodes);
+    setLinks(newLinks);
+    setSelectedNode(null); // Deselect after deletion
+  }, [nodes, links]);
+
   const selectedNodeHasParent = useMemo(() => {
     if (!selectedNode) return false;
     return links.some(link => link.target.toLowerCase() === selectedNode.toLowerCase());
@@ -308,6 +322,7 @@ const App: React.FC = () => {
               onManualAdd={handleManualAdd}
               selectedNodeHasParent={selectedNodeHasParent}
               onNodeSelect={handleNodeSelect}
+              onNodeDelete={handleNodeDelete}
           />
           {nodes.length > 0 && (
             <>

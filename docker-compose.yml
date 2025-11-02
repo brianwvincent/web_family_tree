@@ -1,5 +1,6 @@
 services:
   web:
+    image: web_family_tree_server
     build:
       context: .
       dockerfile: Dockerfile

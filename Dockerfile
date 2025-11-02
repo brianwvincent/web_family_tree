@@ -34,6 +34,9 @@ RUN uv pip install --system -r pyproject.toml
 # Copy the built React app from builder stage
 COPY --from=builder /app/dist ./dist
 
+# Copy static files (icons, etc.)
+COPY static ./static
+
 # Copy Python server
 COPY server.py .
 

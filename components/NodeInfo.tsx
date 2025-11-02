@@ -11,6 +11,7 @@ interface NodeInfoProps {
   onManualAdd: (name: string, relationshipType?: 'parent' | 'child') => void;
   selectedNodeHasParent: boolean;
   onNodeSelect?: (nodeId: string) => void;
+  onNodeDelete?: (nodeId: string) => void;
 }
 
 const NodeInfo: React.FC<NodeInfoProps> = ({ 
@@ -20,7 +21,8 @@ const NodeInfo: React.FC<NodeInfoProps> = ({
   onNodeNameChange,
   onManualAdd,
   selectedNodeHasParent,
-  onNodeSelect
+  onNodeSelect,
+  onNodeDelete
 }) => {
   const [editedName, setEditedName] = useState(selectedNodeId || '');
   const [memberName, setMemberName] = useState('');
@@ -47,6 +49,14 @@ const NodeInfo: React.FC<NodeInfoProps> = ({
     if (!memberName.trim()) return;
     onManualAdd(memberName, relationshipType);
     setMemberName('');
+  };
+
+  const handleDelete = () => {
+    if (selectedNodeId && onNodeDelete) {
+      if (confirm(`Are you sure you want to delete "${selectedNodeId}"? This will also remove all relationships with this member.`)) {
+        onNodeDelete(selectedNodeId);
+      }
+    }
   };
 
   const parentLink = links.find(link => link.target === selectedNodeId);
@@ -167,6 +177,20 @@ const NodeInfo: React.FC<NodeInfoProps> = ({
               </div>
           </div>
       </div>
+      
+      {/* Delete Button */}
+      {onNodeDelete && (
+        <div className="border-t border-gray-700/50 pt-4 mt-4">
+          <button 
+            type="button" 
+            onClick={handleDelete}
+            className="w-full flex items-center justify-center px-4 py-2 bg-red-600/80 hover:bg-red-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-opacity-75"
+          >
+            <CloseIcon className="w-5 h-5 mr-2" />
+            Delete Member
+          </button>
+        </div>
+      )}
     </div>
   );
 };
