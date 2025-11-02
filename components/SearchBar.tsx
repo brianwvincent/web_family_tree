@@ -1,5 +1,6 @@
 import React from 'react';
 import SearchIcon from './icons/SearchIcon';
+import CloseIcon from './icons/CloseIcon';
 
 interface SearchBarProps {
   searchQuery: string;
@@ -18,8 +19,17 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchQuery, onSearch }) => {
           placeholder="Find a family member..."
           value={searchQuery}
           onChange={(e) => onSearch(e.target.value)}
-          className="w-full pl-11 pr-4 py-3 bg-gray-800/80 backdrop-blur-sm border border-gray-600/50 text-white rounded-lg shadow-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+          className="w-full pl-11 pr-11 py-3 bg-gray-800/80 backdrop-blur-sm border border-gray-600/50 text-white rounded-lg shadow-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
         />
+        {searchQuery && (
+          <button
+            onClick={() => onSearch('')}
+            className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 hover:text-white transition-colors"
+            aria-label="Clear search"
+          >
+            <CloseIcon className="w-4 h-4" />
+          </button>
+        )}
       </div>
     </div>
   );
