@@ -34,7 +34,7 @@ const AppStartPage: React.FC<AppStartPageProps> = ({ onFileUpload, onStartManual
           An interactive way to explore your family history.
         </p>
         <p className="mt-2 text-lg text-gray-400 max-w-2xl">
-          Visualize your heritage by uploading a CSV or adding members one by one.
+          Bring your family history to life — upload a CSV or build your tree one connection at a time.
         </p>
       </header>
 

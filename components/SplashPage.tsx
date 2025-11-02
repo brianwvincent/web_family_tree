@@ -30,9 +30,9 @@ const SplashPage: React.FC = () => {
       <main className="pt-24">
         {/* Hero Section */}
         <section className="text-center py-20 px-6">
-          <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight">Visualize Your Legacy</h1>
+          <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight">Your Family. Beautifully Connected.</h1>
           <p className="mt-4 text-xl text-gray-300 max-w-3xl mx-auto">
-            Build, explore, and share your family history with beautiful, interactive tree diagrams. Uncover your story with HeirGraph.
+            Build, explore, and share your family network with beautiful, interactive tree diagrams. Bring your roots to life with HeirGraph - where ancestry meets elegant design.
           </p>
           <a href="#/app" className="mt-8 inline-block bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 px-10 rounded-lg text-lg transition-transform transform hover:scale-105 duration-300">
             Get Started for Free
@@ -47,7 +47,7 @@ const SplashPage: React.FC = () => {
         {/* Features Section */}
         <section id="features" className="py-20 bg-gray-800/40">
           <div className="container mx-auto px-6 text-center">
-            <h2 className="text-4xl font-bold mb-2">Powerful Features, Simple Interface</h2>
+            <h2 className="text-4xl font-bold mb-2">Streamlined. Intuitive. Powerful. </h2>
             <p className="text-lg text-gray-400 mb-16">Everything you need to map your ancestry.</p>
             <div className="grid md:grid-cols-3 gap-12">
               <div className="flex flex-col items-center">
