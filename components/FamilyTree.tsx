@@ -15,18 +15,18 @@ const FamilyTree: React.FC<FamilyTreeProps> = ({ data, searchQuery, selectedNode
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
-    const updateDimensions = () => {
-      if (wrapperRef.current) {
-        setDimensions({
-          width: wrapperRef.current.clientWidth,
-          height: wrapperRef.current.clientHeight,
-        });
-      }
-    };
-    
-    updateDimensions();
-    window.addEventListener('resize', updateDimensions);
-    return () => window.removeEventListener('resize', updateDimensions);
+    const element = wrapperRef.current;
+    if (!element) return;
+
+    const observer = new ResizeObserver(() => {
+      setDimensions({
+        width: element.clientWidth,
+        height: element.clientHeight,
+      });
+    });
+
+    observer.observe(element);
+    return () => observer.disconnect();
   }, []);
 
   // Effect for initial drawing, data changes, and resizing

@@ -6,6 +6,8 @@ import TreeIcon from './components/icons/TreeIcon';
 import NodeInfo from './components/NodeInfo';
 import LandingPage from './components/LandingPage';
 import HomeIcon from './components/icons/HomeIcon';
+import SearchBar from './components/SearchBar';
+import ResetIcon from './components/icons/ResetIcon';
 
 const App: React.FC = () => {
   const [view, setView] = useState<'landing' | 'tree'>('landing');
@@ -70,34 +72,70 @@ const App: React.FC = () => {
     reader.readAsText(file);
   }, []);
 
-  const handleManualAdd = useCallback((parent: string, child: string) => {
-    if (!parent || !child) {
-        setError("Both parent and child names are required.");
+  const handleManualAdd = useCallback((name: string, relationshipType?: 'parent' | 'child') => {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setError("Member name is required.");
+      return;
+    }
+    setError(null);
+
+    // SCENARIO: Adding a root node (no node selected).
+    if (!selectedNode) {
+        if (nodes.some(n => n.id.toLowerCase() === trimmedName.toLowerCase())) {
+            setError("A member with this name already exists.");
+            return;
+        }
+        const newNodes = [...nodes, { id: trimmedName }];
+        setNodes(newNodes);
         return;
     }
-    if (parent.trim().toLowerCase() === child.trim().toLowerCase()) {
-        setError("Parent and child cannot have the same name.");
+
+    // SCENARIO: Adding a relationship to a selected node.
+    if (!relationshipType) {
+        setError("A relationship type (parent or child) must be specified.");
+        return;
+    }
+
+    const existingNodeName = selectedNode;
+    const newNodeName = trimmedName;
+
+    if (existingNodeName.toLowerCase() === newNodeName.toLowerCase()) {
+        setError("The new member must have a different name from the selected member.");
         return;
     }
     
-    const newLink: AppLink = { source: parent.trim(), target: child.trim() };
-    
-    if (links.some(l => l.source === newLink.source && l.target === newLink.target)) {
+    let parentName: string, childName: string;
+
+    if (relationshipType === 'child') {
+        parentName = existingNodeName;
+        childName = newNodeName;
+    } else { // 'parent'
+        parentName = newNodeName;
+        childName = existingNodeName;
+    }
+
+    if (links.some(l => l.target.toLowerCase() === childName.toLowerCase())) {
+        setError(`${childName} already has a parent. A person can only have one parent in this tree structure.`);
+        return;
+    }
+
+    if (links.some(l => l.source.toLowerCase() === parentName.toLowerCase() && l.target.toLowerCase() === childName.toLowerCase())) {
         setError("This relationship already exists.");
         return;
     }
 
     const nodeSet = new Set(nodes.map(n => n.id));
-    nodeSet.add(parent.trim());
-    nodeSet.add(child.trim());
-    
-    const newNodes = Array.from(nodeSet).map(id => ({ id }));
-    const newLinks = [...links, newLink];
+    nodeSet.add(parentName);
+    nodeSet.add(childName);
 
+    const newNodes = Array.from(nodeSet).map(id => ({ id }));
+    const newLink: AppLink = { source: parentName, target: childName };
+    const newLinks = [...links, newLink];
+    
     setNodes(newNodes);
     setLinks(newLinks);
-    setError(null);
-  }, [nodes, links]);
+}, [nodes, links, selectedNode]);
 
   const handleStartManualAdd = useCallback(() => {
     handleResetTree(false); // Clear any existing state without going to landing
@@ -128,6 +166,11 @@ const App: React.FC = () => {
       setView('landing');
     }
   }, []);
+
+  const selectedNodeHasParent = useMemo(() => {
+    if (!selectedNode) return false;
+    return links.some(link => link.target.toLowerCase() === selectedNode.toLowerCase());
+  }, [selectedNode, links]);
 
   const hierarchicalData = useMemo<HierarchicalNode | null>(() => {
     if (nodes.length === 0) return null;
@@ -173,7 +216,18 @@ const App: React.FC = () => {
              <TreeIcon className="w-8 h-8 text-emerald-400" />
              <h1 className="text-2xl font-bold ml-3 text-white">Family Tree Builder</h1>
            </div>
-           <button
+           <div className="flex items-center gap-2">
+            {nodes.length > 0 && (
+                <button
+                    onClick={() => handleResetTree(true)}
+                    className="p-2 rounded-full text-gray-400 hover:bg-red-600/50 hover:text-white transition-colors"
+                    aria-label="Reset Tree"
+                    title="Reset Tree"
+                >
+                    <ResetIcon className="w-6 h-6" />
+                </button>
+            )}
+            <button
               onClick={() => handleResetTree(true)}
               className="p-2 rounded-full text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
               aria-label="Go to Home"
@@ -181,15 +235,14 @@ const App: React.FC = () => {
             >
               <HomeIcon className="w-6 h-6" />
             </button>
+           </div>
         </header>
         <Controls 
             onFileUpload={handleFileUpload}
             onManualAdd={handleManualAdd}
-            onSearch={handleSearch}
-            searchQuery={searchQuery}
-            onResetTree={handleResetTree}
             isTreeVisible={nodes.length > 0}
             selectedNode={selectedNode}
+            selectedNodeHasParent={selectedNodeHasParent}
         />
         {error && <div className="mt-4 p-3 bg-red-800/50 text-red-300 border border-red-700/50 rounded-lg text-sm">{error}</div>}
         <NodeInfo 
@@ -209,12 +262,18 @@ const App: React.FC = () => {
       </aside>
       <main className="flex-grow relative bg-gray-900 overflow-hidden">
         {hierarchicalData ? (
-          <FamilyTree 
-            data={hierarchicalData} 
-            searchQuery={searchQuery}
-            selectedNode={selectedNode}
-            onNodeSelect={handleNodeSelect}
+          <>
+            <SearchBar 
+                searchQuery={searchQuery}
+                onSearch={handleSearch}
             />
+            <FamilyTree 
+                data={hierarchicalData} 
+                searchQuery={searchQuery}
+                selectedNode={selectedNode}
+                onNodeSelect={handleNodeSelect}
+            />
+          </>
         ) : (
            <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 p-8">
                 <TreeIcon className="w-24 h-24 mb-6 opacity-20" />
