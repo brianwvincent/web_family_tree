@@ -3,7 +3,7 @@ import { AppNode, AppLink, FamilyTreeApi, HierarchicalNode } from '../types';
 import CloseIcon from './icons/CloseIcon';
 import DownloadIcon from './icons/DownloadIcon';
 import SparklesIcon from './icons/SparklesIcon';
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Modality } from "@google/genai";
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -137,21 +137,31 @@ The image should convey a sense of legacy, connection, and time. Use the visual 
     
     try {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const response = await ai.models.generateImages({
-            model: 'imagen-4.0-generate-001',
-            prompt: prompt,
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash-image',
+            contents: {
+                parts: [{ text: prompt }],
+            },
             config: {
-              numberOfImages: 1,
-              outputMimeType: 'image/png',
+                responseModalities: [Modality.IMAGE],
             },
         });
 
-        if (response.generatedImages && response.generatedImages.length > 0) {
-            const base64ImageBytes: string = response.generatedImages[0].image.imageBytes;
-            const imageUrl = `data:image/png;base64,${base64ImageBytes}`;
-            setGeneratedImage(imageUrl);
-            setView('result');
-        } else {
+        let foundImage = false;
+        if (response.candidates && response.candidates.length > 0) {
+            for (const part of response.candidates[0].content.parts) {
+                if (part.inlineData) {
+                    const base64ImageBytes: string = part.inlineData.data;
+                    const imageUrl = `data:image/png;base64,${base64ImageBytes}`;
+                    setGeneratedImage(imageUrl);
+                    setView('result');
+                    foundImage = true;
+                    break; 
+                }
+            }
+        }
+        
+        if (!foundImage) {
             throw new Error("API returned no images.");
         }
     } catch (e) {

@@ -44,7 +44,7 @@ const NodeInfo: React.FC<NodeInfoProps> = ({ selectedNodeId, links, onDeselect, 
           animation: fade-in 0.3s ease-out forwards;
         }
       `}</style>
-      <h3 className="text-lg font-semibold text-purple-300 mb-4">Member Details</h3>
+      <h3 className="text-lg font-semibold text-purple-300 mb-4">Selected Member Details</h3>
       <button onClick={onDeselect} className="absolute top-3 right-3 text-gray-500 hover:text-white transition-colors" aria-label="Close details">
         <CloseIcon className="w-5 h-5" />
       </button>
