@@ -3,7 +3,7 @@ import { AppNode, AppLink, HierarchicalNode, FamilyTreeApi } from './types';
 import FamilyTree from './components/FamilyTree';
 import Controls from './components/Controls';
 import NodeInfo from './components/NodeInfo';
-import LandingPage from './components/LandingPage';
+import AppStartPage from './components/AppStartPage';
 import HomeIcon from './components/icons/HomeIcon';
 import SearchBar from './components/SearchBar';
 import ResetIcon from './components/icons/ResetIcon';
@@ -244,7 +244,7 @@ const App: React.FC = () => {
   }, [nodes, links]);
 
   if (view === 'landing') {
-    return <LandingPage onFileUpload={handleFileUpload} onStartManual={handleStartManualAdd} />;
+    return <AppStartPage onFileUpload={handleFileUpload} onStartManual={handleStartManualAdd} />;
   }
 
   return (
@@ -259,10 +259,10 @@ const App: React.FC = () => {
       <div className="flex flex-col md:flex-row h-screen bg-gray-900 text-gray-100 font-sans">
         <aside className="w-full md:w-80 lg:w-96 bg-gray-800/50 p-6 border-b md:border-b-0 md:border-r border-gray-700/50 shadow-lg flex-shrink-0 overflow-y-auto">
           <header className="flex items-center justify-between mb-8">
-            <div className="flex items-center">
+            <a href="#/" className="flex items-center" title="Back to Home Page">
               <Logo className="w-10 h-10" />
               <h1 className="text-2xl font-bold ml-2 text-white">HeirGraph</h1>
-            </div>
+            </a>
             <div className="flex items-center gap-1">
               {nodes.length > 0 && (
                 <>
@@ -275,10 +275,10 @@ const App: React.FC = () => {
                     <ExportIcon className="w-6 h-6" />
                   </button>
                   <button
-                      onClick={() => handleResetTree(true)}
+                      onClick={() => handleResetTree(false)}
                       className="p-2 rounded-full text-gray-400 hover:bg-red-600/50 hover:text-white transition-colors"
-                      aria-label="Reset Tree"
-                      title="Reset Tree"
+                      aria-label="Clear Tree"
+                      title="Clear Tree"
                   >
                       <ResetIcon className="w-6 h-6" />
                   </button>
@@ -287,8 +287,8 @@ const App: React.FC = () => {
               <button
                 onClick={() => handleResetTree(true)}
                 className="p-2 rounded-full text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
-                aria-label="Go to Home"
-                title="Go to Home"
+                aria-label="Go to App Start"
+                title="Go to App Start"
               >
                 <HomeIcon className="w-6 h-6" />
               </button>

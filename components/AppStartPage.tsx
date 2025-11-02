@@ -1,15 +1,14 @@
-
 import React, { useRef } from 'react';
 import UploadIcon from './icons/UploadIcon';
 import AddIcon from './icons/AddIcon';
 import Logo from './icons/Logo';
 
-interface LandingPageProps {
+interface AppStartPageProps {
   onFileUpload: (file: File) => void;
   onStartManual: () => void;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onFileUpload, onStartManual }) => {
+const AppStartPage: React.FC<AppStartPageProps> = ({ onFileUpload, onStartManual }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,4 +90,4 @@ Father,Daughter`}
   );
 };
 
-export default LandingPage;
+export default AppStartPage;
