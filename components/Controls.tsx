@@ -69,37 +69,36 @@ const Controls: React.FC<ControlsProps> = ({
             <div>
               <p className="text-sm text-gray-400 mb-2">Add a new member related to <span className="font-bold text-white">{selectedNode}</span>.</p>
             </div>
-            <div className="flex flex-col lg:flex-row lg:items-center gap-3">
-              <input
-                type="text"
-                placeholder="New Member's Name"
-                value={memberName}
-                onChange={(e) => setMemberName(e.target.value)}
-                className="w-full lg:flex-grow px-3 py-2 bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
-                required
-              />
-              <div className="flex flex-col sm:flex-row lg:flex-shrink-0 gap-3">
-                {!selectedNodeHasParent && (
-                  <button 
-                    type="button" 
-                    onClick={() => handleAddRelationship('parent')}
-                    disabled={!memberName.trim()}
-                    className="w-full sm:w-auto flex items-center justify-center px-4 py-2 bg-sky-600/80 hover:bg-sky-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-opacity-75 disabled:bg-gray-600/50 disabled:cursor-not-allowed"
-                  >
-                    <AddIcon className="w-5 h-5 mr-2" />
-                    Add as Parent
-                  </button>
-                )}
+            <input
+              type="text"
+              placeholder="New Member's Name"
+              value={memberName}
+              onChange={(e) => setMemberName(e.target.value)}
+              className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+              required
+            />
+            <div className="flex flex-col sm:flex-row gap-3">
+              {!selectedNodeHasParent && (
                 <button 
                   type="button" 
-                  onClick={() => handleAddRelationship('child')}
+                  onClick={() => handleAddRelationship('parent')}
                   disabled={!memberName.trim()}
-                  className="w-full sm:w-auto flex items-center justify-center px-4 py-2 bg-indigo-600/80 hover:bg-indigo-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-opacity-75 disabled:bg-gray-600/50 disabled:cursor-not-allowed"
+                  className="w-full flex items-center justify-center px-4 py-2 bg-sky-600/80 hover:bg-sky-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-opacity-75 disabled:bg-gray-600/50 disabled:cursor-not-allowed"
                 >
                   <AddIcon className="w-5 h-5 mr-2" />
-                  Add as Child
+                  Add as Parent
                 </button>
-              </div>
+              )}
+
+              <button 
+                type="button" 
+                onClick={() => handleAddRelationship('child')}
+                disabled={!memberName.trim()}
+                className="w-full flex items-center justify-center px-4 py-2 bg-indigo-600/80 hover:bg-indigo-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-opacity-75 disabled:bg-gray-600/50 disabled:cursor-not-allowed"
+              >
+                <AddIcon className="w-5 h-5 mr-2" />
+                Add as Child
+              </button>
             </div>
           </form>
         </div>
