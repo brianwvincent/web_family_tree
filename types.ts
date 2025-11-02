@@ -1,4 +1,3 @@
-
 export interface AppNode {
   id: string;
 }
@@ -9,6 +8,10 @@ export interface AppLink {
 }
 
 export interface HierarchicalNode {
-  id: string;
+  id:string;
   children: HierarchicalNode[];
+}
+
+export interface FamilyTreeApi {
+  getSVGData: () => { svgString: string; width: number; height: number } | null;
 }

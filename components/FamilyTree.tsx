@@ -1,6 +1,6 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle } from 'react';
 import * as d3 from 'd3';
-import { HierarchicalNode } from '../types';
+import { HierarchicalNode, FamilyTreeApi } from '../types';
 
 interface FamilyTreeProps {
   data: HierarchicalNode;
@@ -11,17 +11,92 @@ interface FamilyTreeProps {
   generationSpacing: number;
 }
 
-const FamilyTree: React.FC<FamilyTreeProps> = ({ 
+const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({ 
   data, 
   searchQuery, 
   selectedNode, 
   onNodeSelect,
   siblingSpacing,
   generationSpacing,
-}) => {
+}, ref) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  useImperativeHandle(ref, () => ({
+    getSVGData: () => {
+        if (!svgRef.current) return null;
+
+        const originalSvg = svgRef.current;
+        const clonedSvg = originalSvg.cloneNode(true) as SVGSVGElement;
+
+        // Selectors for all visual elements in the tree
+        const selectors = ['path.link', '.node circle', '.node text'];
+
+        selectors.forEach(selector => {
+            const originalElements = Array.from(originalSvg.querySelectorAll(selector));
+            const clonedElements = Array.from(clonedSvg.querySelectorAll(selector));
+
+            originalElements.forEach((originalEl, i) => {
+                const clonedEl = clonedElements[i] as HTMLElement;
+                if (!clonedEl) return;
+
+                const computedStyle = window.getComputedStyle(originalEl);
+                let inlineStyle = '';
+                
+                // Robustly copy all computed styles to an inline style string
+                for (let i = 0; i < computedStyle.length; i++) {
+                    const prop = computedStyle[i];
+                    inlineStyle += `${prop}: ${computedStyle.getPropertyValue(prop)}; `;
+                }
+                
+                clonedEl.setAttribute('style', inlineStyle);
+
+                // --- Apply "Light Theme" Overrides for Export ---
+                if (clonedEl.tagName.toLowerCase() === 'text') {
+                    clonedEl.style.fill = '#000000';
+                    clonedEl.style.stroke = '#ffffff'; // The text "halo" effect on a white background
+                } else if (originalEl.matches('path.link')) {
+                    clonedEl.style.stroke = '#555555'; // Dark grey for links
+                }
+                
+                // Explicitly copy attributes that are not styles, like radius
+                if (originalEl.tagName.toLowerCase() === 'circle') {
+                    clonedEl.setAttribute('r', originalEl.getAttribute('r') || '6');
+                }
+            });
+        });
+
+        // Remove the zoom/pan transform from the main group to calculate its natural size
+        const g = clonedSvg.querySelector('g');
+        if (!g) return null;
+        g.setAttribute('transform', '');
+
+        const bbox = g.getBBox();
+        const padding = 40;
+
+        clonedSvg.setAttribute('width', `${bbox.width + padding * 2}`);
+        clonedSvg.setAttribute('height', `${bbox.height + padding * 2}`);
+        clonedSvg.setAttribute('viewBox', `${bbox.x - padding} ${bbox.y - padding} ${bbox.width + padding * 2} ${bbox.height + padding * 2}`);
+        clonedSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+        
+        // Add a style tag for the white background and default font
+        const style = document.createElement('style');
+        style.textContent = `
+            svg { background-color: #ffffff; }
+            text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; }
+        `;
+        clonedSvg.prepend(style);
+
+        const svgString = new XMLSerializer().serializeToString(clonedSvg);
+
+        return {
+            svgString,
+            width: bbox.width + padding * 2,
+            height: bbox.height + padding * 2,
+        };
+    },
+  }));
 
   useEffect(() => {
     const element = wrapperRef.current;
@@ -229,6 +304,6 @@ const FamilyTree: React.FC<FamilyTreeProps> = ({
       <svg ref={svgRef} width={dimensions.width} height={dimensions.height}></svg>
     </div>
   );
-};
+});
 
 export default FamilyTree;

@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { AppNode, AppLink, HierarchicalNode } from './types';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
+import { AppNode, AppLink, HierarchicalNode, FamilyTreeApi } from './types';
 import FamilyTree from './components/FamilyTree';
 import Controls from './components/Controls';
 import TreeIcon from './components/icons/TreeIcon';
@@ -9,6 +9,8 @@ import HomeIcon from './components/icons/HomeIcon';
 import SearchBar from './components/SearchBar';
 import ResetIcon from './components/icons/ResetIcon';
 import LayoutControls from './components/LayoutControls';
+import ExportIcon from './components/icons/ExportIcon';
+import ExportModal from './components/ExportModal';
 
 const App: React.FC = () => {
   const [view, setView] = useState<'landing' | 'tree'>('landing');
@@ -19,6 +21,8 @@ const App: React.FC = () => {
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [siblingSpacing, setSiblingSpacing] = useState(1);
   const [generationSpacing, setGenerationSpacing] = useState(1);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const familyTreeRef = useRef<FamilyTreeApi>(null);
 
   const handleFileUpload = useCallback((file: File) => {
     setError(null);
@@ -244,94 +248,114 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-gray-900 text-gray-100 font-sans">
-      <aside className="w-full md:w-80 lg:w-96 bg-gray-800/50 p-6 border-b md:border-b-0 md:border-r border-gray-700/50 shadow-lg flex-shrink-0 overflow-y-auto">
-        <header className="flex items-center justify-between mb-8">
-           <div className="flex items-center">
-             <TreeIcon className="w-8 h-8 text-emerald-400" />
-             <h1 className="text-2xl font-bold ml-3 text-white">Family Tree Builder</h1>
-           </div>
-           <div className="flex items-center gap-2">
-            {nodes.length > 0 && (
-                <button
-                    onClick={() => handleResetTree(true)}
-                    className="p-2 rounded-full text-gray-400 hover:bg-red-600/50 hover:text-white transition-colors"
-                    aria-label="Reset Tree"
-                    title="Reset Tree"
-                >
-                    <ResetIcon className="w-6 h-6" />
-                </button>
-            )}
-            <button
-              onClick={() => handleResetTree(true)}
-              className="p-2 rounded-full text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
-              aria-label="Go to Home"
-              title="Go to Home"
-            >
-              <HomeIcon className="w-6 h-6" />
-            </button>
-           </div>
-        </header>
-        <Controls 
-            onFileUpload={handleFileUpload}
-            onManualAdd={handleManualAdd}
-            isTreeVisible={nodes.length > 0}
-            selectedNode={selectedNode}
-            selectedNodeHasParent={selectedNodeHasParent}
-        />
-        {error && <div className="mt-4 p-3 bg-red-800/50 text-red-300 border border-red-700/50 rounded-lg text-sm">{error}</div>}
-        <NodeInfo 
-            selectedNodeId={selectedNode}
-            links={links}
-            onDeselect={() => handleNodeSelect(null)}
-            onNodeNameChange={handleNodeNameChange}
-        />
-        {nodes.length > 0 && (
-          <>
-            <div className="border-t border-gray-700/50 my-6"></div>
-            <LayoutControls
-              siblingSpacing={siblingSpacing}
-              setSiblingSpacing={setSiblingSpacing}
-              generationSpacing={generationSpacing}
-              setGenerationSpacing={setGenerationSpacing}
-            />
-          </>
-        )}
-         <div className="mt-8 p-4 bg-gray-800/30 border border-gray-700/50 rounded-lg text-sm text-gray-400">
-            <h3 className="font-semibold text-gray-200 mb-2">How to Use:</h3>
-            <ul className="list-disc list-inside space-y-1">
-                <li><span className="font-semibold">View Details:</span> Click a member to see their parent and children.</li>
-                <li><span className="font-semibold">Edit Name:</span> Change a member's name in the details panel.</li>
-                <li><span className="font-semibold">Search:</span> Find a family member using the search bar.</li>
-                <li><span className="font-semibold">Interact:</span> Pan and zoom the tree visualization.</li>
-            </ul>
-        </div>
-      </aside>
-      <main className="flex-grow relative bg-gray-900 overflow-hidden">
-        {hierarchicalData ? (
-          <>
-            <SearchBar 
-                searchQuery={searchQuery}
-                onSearch={handleSearch}
-            />
-            <FamilyTree 
-                data={hierarchicalData} 
-                searchQuery={searchQuery}
-                selectedNode={selectedNode}
-                onNodeSelect={handleNodeSelect}
-                siblingSpacing={siblingSpacing}
-                generationSpacing={generationSpacing}
-            />
-          </>
-        ) : (
-           <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 p-8">
-                <TreeIcon className="w-24 h-24 mb-6 opacity-20" />
-                <h2 className="text-2xl font-semibold text-gray-400">Your Family Tree Awaits</h2>
-                <p className="mt-2 max-w-md">Get started by adding a family member or uploading a CSV file using the controls on the left.</p>
+    <>
+      <ExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        nodes={nodes}
+        links={links}
+        familyTreeRef={familyTreeRef}
+      />
+      <div className="flex flex-col md:flex-row h-screen bg-gray-900 text-gray-100 font-sans">
+        <aside className="w-full md:w-80 lg:w-96 bg-gray-800/50 p-6 border-b md:border-b-0 md:border-r border-gray-700/50 shadow-lg flex-shrink-0 overflow-y-auto">
+          <header className="flex items-center justify-between mb-8">
+            <div className="flex items-center">
+              <TreeIcon className="w-8 h-8 text-emerald-400" />
+              <h1 className="text-2xl font-bold ml-3 text-white">Family Tree Builder</h1>
             </div>
-        )}
-      </main>
-    </div>
+            <div className="flex items-center gap-1">
+              {nodes.length > 0 && (
+                <>
+                  <button
+                    onClick={() => setIsExportModalOpen(true)}
+                    className="p-2 rounded-full text-gray-400 hover:bg-emerald-600/50 hover:text-white transition-colors"
+                    aria-label="Export Tree"
+                    title="Export Tree"
+                  >
+                    <ExportIcon className="w-6 h-6" />
+                  </button>
+                  <button
+                      onClick={() => handleResetTree(true)}
+                      className="p-2 rounded-full text-gray-400 hover:bg-red-600/50 hover:text-white transition-colors"
+                      aria-label="Reset Tree"
+                      title="Reset Tree"
+                  >
+                      <ResetIcon className="w-6 h-6" />
+                  </button>
+                </>
+              )}
+              <button
+                onClick={() => handleResetTree(true)}
+                className="p-2 rounded-full text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
+                aria-label="Go to Home"
+                title="Go to Home"
+              >
+                <HomeIcon className="w-6 h-6" />
+              </button>
+            </div>
+          </header>
+          <Controls 
+              onFileUpload={handleFileUpload}
+              onManualAdd={handleManualAdd}
+              isTreeVisible={nodes.length > 0}
+              selectedNode={selectedNode}
+              selectedNodeHasParent={selectedNodeHasParent}
+          />
+          {error && <div className="mt-4 p-3 bg-red-800/50 text-red-300 border border-red-700/50 rounded-lg text-sm">{error}</div>}
+          <NodeInfo 
+              selectedNodeId={selectedNode}
+              links={links}
+              onDeselect={() => handleNodeSelect(null)}
+              onNodeNameChange={handleNodeNameChange}
+          />
+          {nodes.length > 0 && (
+            <>
+              <div className="border-t border-gray-700/50 my-6"></div>
+              <LayoutControls
+                siblingSpacing={siblingSpacing}
+                setSiblingSpacing={setSiblingSpacing}
+                generationSpacing={generationSpacing}
+                setGenerationSpacing={setGenerationSpacing}
+              />
+            </>
+          )}
+          <div className="mt-8 p-4 bg-gray-800/30 border border-gray-700/50 rounded-lg text-sm text-gray-400">
+              <h3 className="font-semibold text-gray-200 mb-2">How to Use:</h3>
+              <ul className="list-disc list-inside space-y-1">
+                  <li><span className="font-semibold">View Details:</span> Click a member to see their parent and children.</li>
+                  <li><span className="font-semibold">Edit Name:</span> Change a member's name in the details panel.</li>
+                  <li><span className="font-semibold">Search:</span> Find a family member using the search bar.</li>
+                  <li><span className="font-semibold">Interact:</span> Pan and zoom the tree visualization.</li>
+              </ul>
+          </div>
+        </aside>
+        <main className="flex-grow relative bg-gray-900 overflow-hidden">
+          {hierarchicalData ? (
+            <>
+              <SearchBar 
+                  searchQuery={searchQuery}
+                  onSearch={handleSearch}
+              />
+              <FamilyTree 
+                  ref={familyTreeRef}
+                  data={hierarchicalData} 
+                  searchQuery={searchQuery}
+                  selectedNode={selectedNode}
+                  onNodeSelect={handleNodeSelect}
+                  siblingSpacing={siblingSpacing}
+                  generationSpacing={generationSpacing}
+              />
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 p-8">
+                  <TreeIcon className="w-24 h-24 mb-6 opacity-20" />
+                  <h2 className="text-2xl font-semibold text-gray-400">Your Family Tree Awaits</h2>
+                  <p className="mt-2 max-w-md">Get started by adding a family member or uploading a CSV file using the controls on the left.</p>
+              </div>
+          )}
+        </main>
+      </div>
+    </>
   );
 };
 
