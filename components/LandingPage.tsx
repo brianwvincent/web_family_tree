@@ -32,7 +32,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onFileUpload, onStartManual }
         </p>
       </header>
 
-      <main className="mt-12 flex flex-col md:flex-row gap-6">
+      <main className="mt-12 flex flex-col md:flex-row gap-6 items-start">
         <input
           type="file"
           ref={fileInputRef}
@@ -40,13 +40,18 @@ const LandingPage: React.FC<LandingPageProps> = ({ onFileUpload, onStartManual }
           accept=".csv"
           onChange={handleFileChange}
         />
-        <button
-          onClick={triggerFileSelect}
-          className="flex flex-col items-center justify-center w-64 h-40 p-6 bg-gray-800/50 border-2 border-dashed border-gray-600 rounded-lg text-gray-300 hover:bg-gray-800 hover:border-emerald-500 hover:text-white transition-all duration-300"
-        >
-          <UploadIcon className="w-10 h-10 mb-3" />
-          <span className="text-xl font-semibold">Upload CSV File</span>
-        </button>
+        <div className="flex flex-col items-center">
+          <button
+            onClick={triggerFileSelect}
+            className="flex flex-col items-center justify-center w-64 h-40 p-6 bg-gray-800/50 border-2 border-dashed border-gray-600 rounded-lg text-gray-300 hover:bg-gray-800 hover:border-emerald-500 hover:text-white transition-all duration-300"
+          >
+            <UploadIcon className="w-10 h-10 mb-3" />
+            <span className="text-xl font-semibold">Upload CSV File</span>
+          </button>
+          <p className="mt-2 text-xs text-gray-500 text-center w-64">
+            File must be a CSV with "parent" and "child" columns.
+          </p>
+        </div>
         <button
           onClick={onStartManual}
           className="flex flex-col items-center justify-center w-64 h-40 p-6 bg-gray-800/50 border-2 border-dashed border-gray-600 rounded-lg text-gray-300 hover:bg-gray-800 hover:border-indigo-500 hover:text-white transition-all duration-300"
