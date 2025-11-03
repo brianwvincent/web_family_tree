@@ -55,7 +55,7 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
       // We explicitly set attributes to override any inline styles or CSS.
       clonedSvg.querySelectorAll('.link').forEach(el => {
           el.removeAttribute('style');
-          el.setAttribute('stroke', '#555555');
+          el.setAttribute('stroke', '#cccccc'); // Light gray for better readability
           el.setAttribute('fill', 'none');
           el.setAttribute('stroke-width', '1.5');
       });
