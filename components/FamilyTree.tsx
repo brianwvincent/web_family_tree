@@ -9,6 +9,7 @@ interface FamilyTreeProps {
   onNodeSelect: (nodeId: string | null) => void;
   siblingSpacing: number;
   generationSpacing: number;
+  orientation: 'horizontal' | 'vertical';
 }
 
 const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({ 
@@ -18,6 +19,7 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
   onNodeSelect,
   siblingSpacing,
   generationSpacing,
+  orientation,
 }, ref) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -136,14 +138,49 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
     });
 
     const root = d3.hierarchy(data);
-    const treeLayout = d3.tree<HierarchicalNode>().size([height - margin.top - margin.bottom, width - margin.left - margin.right]);
+    
+    // Calculate dynamic node separation based on text content
+    const maxTextWidth = 100; // Maximum width for wrapped text
+    const baseNodeSize = 20; // Base circle size and padding
+    
+    // Dynamic separation function that considers text dimensions
+    const nodeSeparation = (a: d3.HierarchyPointNode<HierarchicalNode>, b: d3.HierarchyPointNode<HierarchicalNode>) => {
+      // Calculate estimated text height (roughly 1 line per 15 chars for wrapped text)
+      const estimateTextLines = (text: string) => Math.ceil(text.length / 15);
+      const aLines = estimateTextLines(a.data.id);
+      const bLines = estimateTextLines(b.data.id);
+      const maxLines = Math.max(aLines, bLines);
+      
+      // Base separation plus additional space for multi-line text
+      const baseSeparation = a.parent === b.parent ? 1 : 2;
+      const textHeightFactor = Math.max(1, maxLines * 0.5);
+      
+      return baseSeparation * textHeightFactor;
+    };
+    
+    // Set tree size and separation based on orientation
+    const treeSize = orientation === 'horizontal' 
+      ? [height - margin.top - margin.bottom, width - margin.left - margin.right]
+      : [width - margin.left - margin.right, height - margin.top - margin.bottom];
+    
+    const treeLayout = d3.tree<HierarchicalNode>()
+      .size(treeSize)
+      .separation(nodeSeparation);
     
     treeLayout(root);
 
+    // Calculate dynamic spacing multipliers based on tree density
+    const nodeCount = root.descendants().length;
+    const depthCount = root.height + 1;
+    
+    // Adjust spacing based on tree size and content
+    const dynamicSiblingSpacing = siblingSpacing * Math.max(1, Math.sqrt(nodeCount) / 3);
+    const dynamicGenerationSpacing = generationSpacing * (1 + (maxTextWidth / 200));
+
     // Apply custom spacing by scaling coordinates
     root.each(d => {
-      d.x *= siblingSpacing;
-      d.y *= generationSpacing;
+      d.x *= dynamicSiblingSpacing;
+      d.y *= dynamicGenerationSpacing;
     });
 
     const zoom = d3.zoom<SVGSVGElement, unknown>()
@@ -163,15 +200,17 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
         const minY = d3.min(yCoords) ?? 0;
         const maxY = d3.max(yCoords) ?? 0;
         
-        const treeWidth = maxY - minY;
-        const treeHeight = maxX - minX;
+        // Calculate tree dimensions based on orientation
+        const treeWidth = orientation === 'horizontal' ? maxY - minY : maxX - minX;
+        const treeHeight = orientation === 'horizontal' ? maxX - minX : maxY - minY;
 
         const scaleX = treeWidth > 0 ? (width - margin.left - margin.right) / treeWidth : 1;
         const scaleY = treeHeight > 0 ? (height - margin.top - margin.bottom) / treeHeight : 1;
         const initialScale = Math.min(scaleX, scaleY, 1) * 0.9;
         
-        const midX = (minY + maxY) / 2;
-        const midY = (minX + maxX) / 2;
+        // Calculate midpoint based on orientation
+        const midX = orientation === 'horizontal' ? (minY + maxY) / 2 : (minX + maxX) / 2;
+        const midY = orientation === 'horizontal' ? (minX + maxX) / 2 : (minY + maxY) / 2;
         
         const initialTransform = d3.zoomIdentity
             .translate(width / 2 - midX * initialScale, height / 2 - midY * initialScale)
@@ -183,9 +222,14 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
         svg.call(zoom.transform, initialTransform);
     }
 
-    const linkGenerator = d3.linkHorizontal<d3.HierarchyPointLink<HierarchicalNode>, d3.HierarchyPointNode<HierarchicalNode>>()
-      .x(d => d.y)
-      .y(d => d.x);
+    // Create appropriate link generator based on orientation
+    const linkGenerator = orientation === 'horizontal'
+      ? d3.linkHorizontal<d3.HierarchyPointLink<HierarchicalNode>, d3.HierarchyPointNode<HierarchicalNode>>()
+          .x(d => d.y)
+          .y(d => d.x)
+      : d3.linkVertical<d3.HierarchyPointLink<HierarchicalNode>, d3.HierarchyPointNode<HierarchicalNode>>()
+          .x(d => d.x)
+          .y(d => d.y);
 
     // Links
     g.selectAll(".link")
@@ -208,7 +252,9 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
       .enter()
       .append("g")
       .attr("class", "node")
-      .attr("transform", d => `translate(${d.y},${d.x})`)
+      .attr("transform", d => orientation === 'horizontal' 
+        ? `translate(${d.y},${d.x})` 
+        : `translate(${d.x},${d.y})`)
       .attr("opacity", 0)
       .style("cursor", "pointer")
       .on('click', (event, d) => {
@@ -218,38 +264,107 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
       .on('mouseover', function(event, d) {
           const currentNode = d3.select(this);
           currentNode.raise(); 
+          const transform = orientation === 'horizontal'
+            ? `translate(${d.y},${d.x}) scale(1.2)`
+            : `translate(${d.x},${d.y}) scale(1.2)`;
           currentNode.transition()
             .duration(150)
-            .attr('transform', `translate(${d.y},${d.x}) scale(1.2)`);
+            .attr('transform', transform);
       })
       .on('mouseout', function(event, d) {
           const currentNode = d3.select(this);
+          const transform = orientation === 'horizontal'
+            ? `translate(${d.y},${d.x}) scale(1)`
+            : `translate(${d.x},${d.y}) scale(1)`;
           currentNode.transition()
             .duration(150)
-            .attr('transform', `translate(${d.y},${d.x}) scale(1)`);
+            .attr('transform', transform);
       });
 
     node.append("circle")
         .attr("stroke-width", 2);
 
+    // Function to wrap text
+    const wrapText = (textElement: d3.Selection<SVGTextElement, d3.HierarchyNode<HierarchicalNode>, SVGGElement, unknown>, maxWidth: number) => {
+      textElement.each(function(d) {
+        const text = d3.select(this);
+        const words = d.data.id.split(/\s+/).reverse();
+        let word: string | undefined;
+        let line: string[] = [];
+        let lineNumber = 0;
+        const lineHeight = 1.1; // ems
+        const x = text.attr("x");
+        const y = text.attr("y");
+        const dy = parseFloat(text.attr("dy") || "0");
+        let tspan = text.text(null).append("tspan").attr("x", x).attr("y", y).attr("dy", dy + "em");
+        
+        while ((word = words.pop())) {
+          line.push(word);
+          tspan.text(line.join(" "));
+          const tspanNode = tspan.node();
+          if (tspanNode && tspanNode.getComputedTextLength() > maxWidth) {
+            line.pop();
+            tspan.text(line.join(" "));
+            line = [word];
+            tspan = text.append("tspan")
+              .attr("x", x)
+              .attr("y", y)
+              .attr("dy", ++lineNumber * lineHeight + dy + "em")
+              .text(word);
+          }
+        }
+        
+        // Center multi-line text vertically
+        const numLines = text.selectAll("tspan").size();
+        if (numLines > 1) {
+          const offset = -(numLines - 1) * lineHeight * 0.5;
+          text.selectAll("tspan").attr("dy", function(this: SVGTSpanElement, _d, i) {
+            return (offset + i * lineHeight + dy) + "em";
+          });
+        }
+      });
+    };
+
     node.append("text")
       .attr("dy", "0.31em")
-      .attr("x", d => d.children ? -18 : 18)
-      .attr("text-anchor", d => d.children ? "end" : "start")
-      .text(d => d.data.id)
+      .attr("x", d => {
+        if (orientation === 'horizontal') {
+          return d.children ? -18 : 18;
+        } else {
+          return 0;
+        }
+      })
+      .attr("y", d => {
+        if (orientation === 'vertical') {
+          return d.children ? -18 : 18;
+        } else {
+          return 0;
+        }
+      })
+      .attr("text-anchor", d => {
+        if (orientation === 'horizontal') {
+          return d.children ? "end" : "start";
+        } else {
+          return "middle";
+        }
+      })
       .attr("fill", "#e5e7eb")
       .style("font-size", "14px")
       .style("paint-order", "stroke")
       .attr("stroke", "#111827")
       .attr("stroke-width", "0.3em")
-      .attr("stroke-linecap", "butt");
+      .attr("stroke-linecap", "butt")
+      .each(function(d) {
+        d3.select(this).text(d.data.id);
+      })
+      .call(wrapText, maxTextWidth);
     
     node.transition()
       .duration(500)
       .delay((d,i) => i * 10)
       .attr("opacity", 1);
       
-  }, [data, dimensions, onNodeSelect, siblingSpacing, generationSpacing]);
+  }, [data, dimensions, onNodeSelect, siblingSpacing, generationSpacing, orientation]);
 
   // Effect for updating styles on search or selection change
   useEffect(() => {
@@ -298,7 +413,7 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
       .transition().duration(300)
       .style("font-weight", d => isSelected(d) || isMatch(d) ? "bold" : "500");
 
-  }, [searchQuery, selectedNode, dimensions.width, siblingSpacing, generationSpacing]);
+  }, [searchQuery, selectedNode, dimensions.width, siblingSpacing, generationSpacing, orientation]);
 
 
   return (

@@ -23,6 +23,7 @@ const App: React.FC = () => {
   const [siblingSpacing, setSiblingSpacing] = useState(1);
   const [generationSpacing, setGenerationSpacing] = useState(1);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [orientation, setOrientation] = useState<'horizontal' | 'vertical'>('horizontal');
   const familyTreeRef = useRef<FamilyTreeApi>(null);
 
   const handleFileUpload = useCallback((file: File) => {
@@ -364,6 +365,15 @@ const App: React.FC = () => {
                   searchQuery={searchQuery}
                   onSearch={handleSearch}
               />
+              <div className="absolute top-6 right-6 z-10">
+                <button
+                  onClick={() => setOrientation(prev => prev === 'horizontal' ? 'vertical' : 'horizontal')}
+                  className="px-4 py-2 bg-gray-800/80 backdrop-blur-sm border border-gray-600/50 text-white rounded-lg shadow-lg hover:bg-gray-700/80 transition-all"
+                  title={orientation === 'horizontal' ? 'Switch to Top-to-Bottom' : 'Switch to Left-to-Right'}
+                >
+                  {orientation === 'horizontal' ? '⬇️ Top-Down' : '➡️ Left-Right'}
+                </button>
+              </div>
               <FamilyTree 
                   ref={familyTreeRef}
                   data={hierarchicalData} 
@@ -372,6 +382,7 @@ const App: React.FC = () => {
                   onNodeSelect={handleNodeSelect}
                   siblingSpacing={siblingSpacing}
                   generationSpacing={generationSpacing}
+                  orientation={orientation}
               />
             </>
           ) : (
