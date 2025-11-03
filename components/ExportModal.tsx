@@ -56,7 +56,13 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, nodes, links
   const handleDownloadGEDCOM = () => {
     if (nodes.length === 0) return;
 
-    let gedcomContent = '0 HEAD\n1 SOUR HeirGraph\n1 GEDC\n2 VERS 5.5.1\n2 FORM LINEAGE-LINKED\n1 CHAR UTF-8\n';
+    let gedcomContent = '0 HEAD\n';
+    gedcomContent += '1 SOUR HeirGraph\n';
+    gedcomContent += '2 VERS 1.0\n';
+    gedcomContent += '1 GEDC\n';
+    gedcomContent += '2 VERS 5.5.1\n';
+    gedcomContent += '2 FORM LINEAGE-LINKED\n';
+    gedcomContent += '1 CHAR UTF-8\n';
     
     const nameToIndiId: Record<string, string> = {};
     let indiCounter = 1;
@@ -87,18 +93,21 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, nodes, links
         parentToFamIds[family.parent].push(famId);
         
         let famString = `0 ${famId} FAM\n`;
+        const parentIndiId = nameToIndiId[family.parent];
+        famString += `1 HUSB ${parentIndiId}\n`;
         family.children.forEach(childName => {
             const childIndiId = nameToIndiId[childName];
             famString += `1 CHIL ${childIndiId}\n`;
             childToFamId[childName] = famId;
         });
-        famGedcomStrings.push(famString.trim());
+        famGedcomStrings.push(famString);
     });
 
     const indiGedcomStrings: string[] = [];
     nodes.forEach(node => {
         const indiId = nameToIndiId[node.id];
-        let indiString = `0 ${indiId} INDI\n1 NAME ${node.id}\n`;
+        let indiString = `0 ${indiId} INDI\n`;
+        indiString += `1 NAME ${node.id}\n`;
         if (childToFamId[node.id]) {
             indiString += `1 FAMC ${childToFamId[node.id]}\n`;
         }
@@ -107,12 +116,12 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, nodes, links
                 indiString += `1 FAMS ${famId}\n`;
             });
         }
-        indiGedcomStrings.push(indiString.trim());
+        indiGedcomStrings.push(indiString);
     });
 
-    gedcomContent += indiGedcomStrings.join('\n') + '\n';
-    gedcomContent += famGedcomStrings.join('\n') + '\n';
-    gedcomContent += '0 TRLR';
+    gedcomContent += indiGedcomStrings.join('');
+    gedcomContent += famGedcomStrings.join('');
+    gedcomContent += '0 TRLR\n';
 
     const blob = new Blob([gedcomContent], { type: 'application/gedcom;charset=utf-8;' });
     downloadFile(blob, 'family-tree.ged');

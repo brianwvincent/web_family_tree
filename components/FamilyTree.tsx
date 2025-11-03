@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle } from 'react';
 import * as d3 from 'd3';
-import { HierarchicalNode, FamilyTreeApi } from '../types';
+import { HierarchicalNode, FamilyTreeApi, AppNode, AppLink } from '../types';
 
 interface FamilyTreeProps {
   data: HierarchicalNode;
@@ -10,6 +10,9 @@ interface FamilyTreeProps {
   siblingSpacing: number;
   generationSpacing: number;
   orientation: 'horizontal' | 'vertical';
+  layoutMode: 'tree' | 'force';
+  nodes: AppNode[];
+  links: AppLink[];
 }
 
 const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({ 
@@ -20,6 +23,9 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
   siblingSpacing,
   generationSpacing,
   orientation,
+  layoutMode,
+  nodes,
+  links,
 }, ref) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -121,7 +127,11 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
 
   // Effect for initial drawing, data changes, and resizing
   useEffect(() => {
-    if (!data || !svgRef.current || dimensions.width === 0) return;
+    if (!svgRef.current || dimensions.width === 0) return;
+    
+    // For force mode, we need nodes and links instead of hierarchical data
+    if (layoutMode === 'force' && (!nodes || nodes.length === 0)) return;
+    if (layoutMode === 'tree' && !data) return;
 
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove(); // Clear SVG on new data or resize
@@ -137,6 +147,191 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
         }
     });
 
+    // Force-directed layout
+    if (layoutMode === 'force') {
+      // Convert AppNode[] and AppLink[] to force simulation format
+      type ForceNode = d3.SimulationNodeDatum & { id: string };
+      type ForceLink = d3.SimulationLinkDatum<ForceNode> & { source: string; target: string };
+      
+      const forceNodes: ForceNode[] = nodes.map(n => ({ 
+        id: n.id,
+        x: width / 2 + (Math.random() - 0.5) * 100,
+        y: height / 2 + (Math.random() - 0.5) * 100
+      }));
+      
+      const forceLinks: ForceLink[] = links.map(l => ({ 
+        source: l.source, 
+        target: l.target 
+      }));
+
+      // Identify leaf nodes (nodes with no children)
+      const hasChildren = new Set(links.map(l => l.source));
+      const leafNodes = new Set(nodes.filter(n => !hasChildren.has(n.id)).map(n => n.id));
+
+      // Custom radial force to push leaf nodes outward
+      const radialForce = () => {
+        forceNodes.forEach(node => {
+          if (leafNodes.has(node.id)) {
+            const dx = (node.x || 0) - width / 2;
+            const dy = (node.y || 0) - height / 2;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance > 0) {
+              const strength = 0.3; // Strength of outward push
+              node.vx = (node.vx || 0) + (dx / distance) * strength;
+              node.vy = (node.vy || 0) + (dy / distance) * strength;
+            }
+          }
+        });
+      };
+
+      const simulation = d3.forceSimulation<ForceNode>(forceNodes)
+        .force("link", d3.forceLink<ForceNode, ForceLink>(forceLinks)
+          .id(d => d.id)
+          .distance(100 * generationSpacing))
+        .force("charge", d3.forceManyBody().strength(-300 * siblingSpacing))
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("collision", d3.forceCollide().radius(40))
+        .force("radial", radialForce);
+
+      const zoom = d3.zoom<SVGSVGElement, unknown>()
+        .scaleExtent([0.1, 3])
+        .on("zoom", (event) => {
+          g.attr("transform", event.transform);
+        });
+
+      svg.call(zoom);
+
+      // Draw links
+      const link = g.selectAll(".link")
+        .data(forceLinks)
+        .enter()
+        .append("line")
+        .attr("class", "link")
+        .attr("stroke", "#4b5563")
+        .attr("stroke-width", 1.5)
+        .attr("opacity", 1);
+
+      // Draw nodes
+      const node = g.selectAll(".node")
+        .data(forceNodes)
+        .enter()
+        .append("g")
+        .attr("class", "node")
+        .attr("opacity", 0)
+        .style("cursor", "pointer")
+        .call(d3.drag<SVGGElement, ForceNode>()
+          .on("start", (event, d) => {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+          })
+          .on("drag", (event, d) => {
+            d.fx = event.x;
+            d.fy = event.y;
+          })
+          .on("end", (event, d) => {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+          }))
+        .on('click', (event, d) => {
+          event.stopPropagation();
+          onNodeSelect(d.id);
+        })
+        .on('mouseover', function() {
+          d3.select(this).raise();
+          d3.select(this).select('circle')
+            .transition()
+            .duration(150)
+            .attr('r', 10);
+        })
+        .on('mouseout', function() {
+          d3.select(this).select('circle')
+            .transition()
+            .duration(150)
+            .attr('r', 6);
+        });
+
+      node.append("circle")
+        .attr("r", 6)
+        .attr("fill", "#10b981")
+        .attr("stroke", "#047857")
+        .attr("stroke-width", 2);
+
+      const maxTextWidth = 100;
+      
+      const wrapText = (textElement: d3.Selection<SVGTextElement, ForceNode, SVGGElement, unknown>, maxWidth: number) => {
+        textElement.each(function(d) {
+          const text = d3.select(this);
+          const words = d.id.split(/\s+/).reverse();
+          let word: string | undefined;
+          let line: string[] = [];
+          let lineNumber = 0;
+          const lineHeight = 1.1;
+          const y = text.attr("y");
+          const dy = parseFloat(text.attr("dy") || "0");
+          let tspan = text.text(null).append("tspan").attr("x", 0).attr("y", y).attr("dy", dy + "em");
+          
+          while ((word = words.pop())) {
+            line.push(word);
+            tspan.text(line.join(" "));
+            const tspanNode = tspan.node();
+            if (tspanNode && tspanNode.getComputedTextLength() > maxWidth) {
+              line.pop();
+              tspan.text(line.join(" "));
+              line = [word];
+              tspan = text.append("tspan")
+                .attr("x", 0)
+                .attr("y", y)
+                .attr("dy", ++lineNumber * lineHeight + dy + "em")
+                .text(word);
+            }
+          }
+          
+          const numLines = text.selectAll("tspan").size();
+          if (numLines > 1) {
+            const offset = -(numLines - 1) * lineHeight * 0.5;
+            text.selectAll("tspan").attr("dy", function(this: SVGTSpanElement, _d, i) {
+              return (offset + i * lineHeight + dy) + "em";
+            });
+          }
+        });
+      };
+
+      node.append("text")
+        .attr("dy", "0.31em")
+        .attr("y", 18)
+        .attr("text-anchor", "middle")
+        .attr("fill", "#e5e7eb")
+        .style("font-size", "14px")
+        .style("paint-order", "stroke")
+        .attr("stroke", "#111827")
+        .attr("stroke-width", "0.3em")
+        .attr("stroke-linecap", "butt")
+        .each(function(d) {
+          d3.select(this).text(d.id);
+        })
+        .call(wrapText, maxTextWidth);
+
+      node.attr("opacity", 1);
+
+      // Update positions on simulation tick
+      simulation.on("tick", () => {
+        link
+          .attr("x1", d => (d.source as ForceNode).x!)
+          .attr("y1", d => (d.source as ForceNode).y!)
+          .attr("x2", d => (d.target as ForceNode).x!)
+          .attr("y2", d => (d.target as ForceNode).y!);
+
+        node.attr("transform", d => `translate(${d.x},${d.y})`);
+      });
+
+      return () => {
+        simulation.stop();
+      };
+    }
+
+    // Tree layout (existing code)
     const root = d3.hierarchy(data);
     
     // Calculate dynamic node separation based on text content
@@ -364,7 +559,7 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
       .delay((d,i) => i * 10)
       .attr("opacity", 1);
       
-  }, [data, dimensions, onNodeSelect, siblingSpacing, generationSpacing, orientation]);
+  }, [data, dimensions, onNodeSelect, siblingSpacing, generationSpacing, orientation, layoutMode, nodes, links]);
 
   // Effect for updating styles on search or selection change
   useEffect(() => {
@@ -378,42 +573,77 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
     const lowerCaseQuery = searchQuery.trim().toLowerCase();
     const isSearching = lowerCaseQuery.length > 0;
 
-    const isMatch = (d: d3.HierarchyNode<HierarchicalNode>) => 
-      isSearching && d.data.id.toLowerCase().includes(lowerCaseQuery);
-    
-    const isSelected = (d: d3.HierarchyNode<HierarchicalNode>) => d.data.id === selectedNode;
+    if (layoutMode === 'force') {
+      // Force layout matching
+      type ForceNode = { id: string };
+      const isMatchForce = (d: ForceNode) => 
+        isSearching && d.id.toLowerCase().includes(lowerCaseQuery);
+      const isSelectedForce = (d: ForceNode) => d.id === selectedNode;
 
-    // Update link opacity
-    g.selectAll(".link")
-      .transition().duration(300)
-      .attr("opacity", isSearching ? 0.3 : 1);
-    
-    // Update node group opacity
-    g.selectAll<SVGGElement, d3.HierarchyNode<HierarchicalNode>>(".node")
-      .transition().duration(300)
-      .attr("opacity", d => !isSearching || isMatch(d) ? 1 : 0.3);
+      g.selectAll(".link")
+        .transition().duration(300)
+        .attr("opacity", isSearching ? 0.3 : 1);
+      
+      g.selectAll<SVGGElement, ForceNode>(".node")
+        .transition().duration(300)
+        .attr("opacity", d => !isSearching || isMatchForce(d) ? 1 : 0.3);
 
-    // Update circle styles
-    g.selectAll<SVGCircleElement, d3.HierarchyNode<HierarchicalNode>>(".node circle")
-      .transition().duration(300)
-      .attr("r", d => isSelected(d) ? 12 : (isMatch(d) ? 10 : 6))
-      .attr("fill", d => {
-        if (isSelected(d)) return '#a855f7';
-        if (isMatch(d)) return '#3b82f6';
-        return '#10b981';
-      })
-      .attr("stroke", d => {
-        if (isSelected(d)) return '#7e22ce';
-        if (isMatch(d)) return '#1d4ed8';
-        return '#047857';
-      });
+      g.selectAll<SVGCircleElement, ForceNode>(".node circle")
+        .transition().duration(300)
+        .attr("r", d => isSelectedForce(d) ? 12 : (isMatchForce(d) ? 10 : 6))
+        .attr("fill", d => {
+          if (isSelectedForce(d)) return '#a855f7';
+          if (isMatchForce(d)) return '#3b82f6';
+          return '#10b981';
+        })
+        .attr("stroke", d => {
+          if (isSelectedForce(d)) return '#7e22ce';
+          if (isMatchForce(d)) return '#1d4ed8';
+          return '#047857';
+        });
 
-    // Update text styles
-    g.selectAll<SVGTextElement, d3.HierarchyNode<HierarchicalNode>>(".node text")
-      .transition().duration(300)
-      .style("font-weight", d => isSelected(d) || isMatch(d) ? "bold" : "500");
+      g.selectAll<SVGTextElement, ForceNode>(".node text")
+        .transition().duration(300)
+        .style("font-weight", d => isSelectedForce(d) || isMatchForce(d) ? "bold" : "500");
+    } else {
+      // Tree layout matching
+      const isMatch = (d: d3.HierarchyNode<HierarchicalNode>) => 
+        isSearching && d.data.id.toLowerCase().includes(lowerCaseQuery);
+      
+      const isSelected = (d: d3.HierarchyNode<HierarchicalNode>) => d.data.id === selectedNode;
 
-  }, [searchQuery, selectedNode, dimensions.width, siblingSpacing, generationSpacing, orientation]);
+      // Update link opacity
+      g.selectAll(".link")
+        .transition().duration(300)
+        .attr("opacity", isSearching ? 0.3 : 1);
+      
+      // Update node group opacity
+      g.selectAll<SVGGElement, d3.HierarchyNode<HierarchicalNode>>(".node")
+        .transition().duration(300)
+        .attr("opacity", d => !isSearching || isMatch(d) ? 1 : 0.3);
+
+      // Update circle styles
+      g.selectAll<SVGCircleElement, d3.HierarchyNode<HierarchicalNode>>(".node circle")
+        .transition().duration(300)
+        .attr("r", d => isSelected(d) ? 12 : (isMatch(d) ? 10 : 6))
+        .attr("fill", d => {
+          if (isSelected(d)) return '#a855f7';
+          if (isMatch(d)) return '#3b82f6';
+          return '#10b981';
+        })
+        .attr("stroke", d => {
+          if (isSelected(d)) return '#7e22ce';
+          if (isMatch(d)) return '#1d4ed8';
+          return '#047857';
+        });
+
+      // Update text styles
+      g.selectAll<SVGTextElement, d3.HierarchyNode<HierarchicalNode>>(".node text")
+        .transition().duration(300)
+        .style("font-weight", d => isSelected(d) || isMatch(d) ? "bold" : "500");
+    }
+
+  }, [searchQuery, selectedNode, dimensions.width, siblingSpacing, generationSpacing, orientation, layoutMode]);
 
 
   return (

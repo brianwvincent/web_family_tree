@@ -24,7 +24,21 @@ const App: React.FC = () => {
   const [generationSpacing, setGenerationSpacing] = useState(1);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [orientation, setOrientation] = useState<'horizontal' | 'vertical'>('horizontal');
+  const [layoutMode, setLayoutMode] = useState<'tree' | 'force'>('tree');
   const familyTreeRef = useRef<FamilyTreeApi>(null);
+
+  type LayoutOption = 'physics' | 'horizontal' | 'vertical';
+  const [layout, setLayout] = useState<LayoutOption>('horizontal');
+
+  const handleLayoutChange = (newLayout: LayoutOption) => {
+    setLayout(newLayout);
+    if (newLayout === 'physics') {
+      setLayoutMode('force');
+    } else {
+      setLayoutMode('tree');
+      setOrientation(newLayout);
+    }
+  };
 
   const handleFileUpload = useCallback((file: File) => {
     setError(null);
@@ -366,13 +380,41 @@ const App: React.FC = () => {
                   onSearch={handleSearch}
               />
               <div className="absolute top-6 right-6 z-10">
-                <button
-                  onClick={() => setOrientation(prev => prev === 'horizontal' ? 'vertical' : 'horizontal')}
-                  className="px-4 py-2 bg-gray-800/80 backdrop-blur-sm border border-gray-600/50 text-white rounded-lg shadow-lg hover:bg-gray-700/80 transition-all"
-                  title={orientation === 'horizontal' ? 'Switch to Top-to-Bottom' : 'Switch to Left-to-Right'}
-                >
-                  {orientation === 'horizontal' ? '⬇️ Top-Down' : '➡️ Left-Right'}
-                </button>
+                <div className="flex bg-gray-800/80 backdrop-blur-sm border border-gray-600/50 rounded-lg shadow-lg overflow-hidden">
+                  <button
+                    onClick={() => handleLayoutChange('horizontal')}
+                    className={`px-3 py-1.5 text-sm text-white transition-all ${
+                      layout === 'horizontal' 
+                        ? 'bg-emerald-600 font-semibold' 
+                        : 'hover:bg-gray-700/80'
+                    }`}
+                    title="Left-to-Right Tree"
+                  >
+                    ➡️
+                  </button>
+                  <button
+                    onClick={() => handleLayoutChange('vertical')}
+                    className={`px-3 py-1.5 text-sm text-white border-x border-gray-600/50 transition-all ${
+                      layout === 'vertical' 
+                        ? 'bg-emerald-600 font-semibold' 
+                        : 'hover:bg-gray-700/80'
+                    }`}
+                    title="Top-to-Bottom Tree"
+                  >
+                    ⬇️
+                  </button>
+                  <button
+                    onClick={() => handleLayoutChange('physics')}
+                    className={`px-3 py-1.5 text-sm text-white transition-all ${
+                      layout === 'physics' 
+                        ? 'bg-emerald-600 font-semibold' 
+                        : 'hover:bg-gray-700/80'
+                    }`}
+                    title="Physics-Based Layout"
+                  >
+                    ⚛️
+                  </button>
+                </div>
               </div>
               <FamilyTree 
                   ref={familyTreeRef}
@@ -383,6 +425,9 @@ const App: React.FC = () => {
                   siblingSpacing={siblingSpacing}
                   generationSpacing={generationSpacing}
                   orientation={orientation}
+                  layoutMode={layoutMode}
+                  nodes={nodes}
+                  links={links}
               />
             </>
           ) : (
