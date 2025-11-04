@@ -403,7 +403,7 @@ const App: React.FC = () => {
                   searchQuery={searchQuery}
                   onSearch={handleSearch}
               />
-              <div className="absolute top-6 right-6 z-10">
+              <div className="absolute top-6 left-6 z-10">
                 <div className="flex bg-gray-800/80 backdrop-blur-sm border border-gray-600/50 rounded-lg shadow-lg overflow-hidden">
                   <button
                     onClick={() => handleLayoutChange('horizontal')}
