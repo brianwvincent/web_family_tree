@@ -66,6 +66,15 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
           el.setAttribute('stroke-width', '1.5');
       });
       
+      // Handle ellipse nodes (tree and force modes)
+      clonedSvg.querySelectorAll('.node ellipse').forEach(el => {
+          el.removeAttribute('style');
+          el.setAttribute('fill', '#ffffff');
+          el.setAttribute('stroke', '#000000');
+          el.setAttribute('stroke-width', '2');
+      });
+      
+      // Handle circle nodes (for backward compatibility if any exist)
       clonedSvg.querySelectorAll('.node circle').forEach(el => {
           el.removeAttribute('style');
           el.setAttribute('fill', '#ffffff');
@@ -76,8 +85,7 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
       clonedSvg.querySelectorAll('.node text').forEach(el => {
           el.removeAttribute('style');
           el.setAttribute('fill', '#000000');
-          // The dark stroke for text is good for the app's dark background,
-          // but not for a light export background.
+          // Remove stroke for cleaner export
           el.setAttribute('stroke', 'none');
       });
       
@@ -491,22 +499,26 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
         })
         .on('mouseover', function() {
           d3.select(this).raise();
-          d3.select(this).select('circle')
+          d3.select(this).select('ellipse')
             .transition()
             .duration(150)
-            .attr('r', 10);
+            .attr('rx', 70)
+            .attr('ry', 30);
         })
         .on('mouseout', function() {
-          d3.select(this).select('circle')
+          d3.select(this).select('ellipse')
             .transition()
             .duration(150)
-            .attr('r', 6);
+            .attr('rx', 60)
+            .attr('ry', 25);
         });
 
-      node.append("circle")
-        .attr("r", 6)
-        .attr("fill", "#10b981")
-        .attr("stroke", "#047857")
+      // Add ellipse nodes
+      node.append("ellipse")
+        .attr("rx", 60)
+        .attr("ry", 25)
+        .attr("fill", "#f0fdfa")
+        .attr("stroke", "#14b8a6")
         .attr("stroke-width", 2);
 
       const maxTextWidth = 100;
@@ -551,14 +563,11 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
 
       node.append("text")
         .attr("dy", "0.31em")
-        .attr("y", 18)
+        .attr("y", 0)
         .attr("text-anchor", "middle")
-        .attr("fill", "#e5e7eb")
+        .attr("fill", "#134e4a")
         .style("font-size", "14px")
-        .style("paint-order", "stroke")
-        .attr("stroke", "#111827")
-        .attr("stroke-width", "0.3em")
-        .attr("stroke-linecap", "butt")
+        .style("font-weight", "600")
         .each(function(d) {
           d3.select(this).text(d.id);
         })
@@ -727,8 +736,13 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
             .attr('transform', transform);
       });
 
-    node.append("circle")
-        .attr("stroke-width", 2);
+    // Add ellipse nodes
+    node.append("ellipse")
+      .attr("rx", 60)
+      .attr("ry", 25)
+      .attr("fill", "#f0fdfa")
+      .attr("stroke", "#14b8a6")
+      .attr("stroke-width", 2);
 
     // Function to wrap text
     const wrapText = (textElement: d3.Selection<SVGTextElement, d3.HierarchyNode<HierarchicalNode>, SVGGElement, unknown>, maxWidth: number) => {
@@ -773,37 +787,16 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
 
     node.append("text")
       .attr("dy", "0.31em")
-      .attr("x", d => {
-        if (orientation === 'horizontal') {
-          return d.children ? -18 : 18;
-        } else {
-          return 0;
-        }
-      })
-      .attr("y", d => {
-        if (orientation === 'vertical') {
-          return d.children ? -18 : 18;
-        } else {
-          return 0;
-        }
-      })
-      .attr("text-anchor", d => {
-        if (orientation === 'horizontal') {
-          return d.children ? "end" : "start";
-        } else {
-          return "middle";
-        }
-      })
-      .attr("fill", "#e5e7eb")
+      .attr("x", 0)
+      .attr("y", 0)
+      .attr("text-anchor", "middle")
+      .attr("fill", "#134e4a")
       .style("font-size", "14px")
-      .style("paint-order", "stroke")
-      .attr("stroke", "#111827")
-      .attr("stroke-width", "0.3em")
-      .attr("stroke-linecap", "butt")
+      .style("font-weight", "600")
       .each(function(d) {
         d3.select(this).text(d.data.id);
       })
-      .call(wrapText, maxTextWidth);
+      .call(wrapText, 100);
     
     node.transition()
       .duration(500)
@@ -839,23 +832,30 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
         .transition().duration(300)
         .attr("opacity", d => !isSearching || isMatchForce(d) ? 1 : 0.3);
 
-      g.selectAll<SVGCircleElement, ForceNode>(".node circle")
+      g.selectAll<SVGEllipseElement, ForceNode>(".node ellipse")
         .transition().duration(300)
-        .attr("r", d => isSelectedForce(d) ? 12 : (isMatchForce(d) ? 10 : 6))
+        .attr("rx", d => isSelectedForce(d) ? 75 : (isMatchForce(d) ? 70 : 60))
+        .attr("ry", d => isSelectedForce(d) ? 32 : (isMatchForce(d) ? 30 : 25))
         .attr("fill", d => {
-          if (isSelectedForce(d)) return '#a855f7';
-          if (isMatchForce(d)) return '#3b82f6';
-          return '#10b981';
+          if (isSelectedForce(d)) return '#fef3c7';
+          if (isMatchForce(d)) return '#dbeafe';
+          return '#f0fdfa';
         })
         .attr("stroke", d => {
-          if (isSelectedForce(d)) return '#7e22ce';
-          if (isMatchForce(d)) return '#1d4ed8';
-          return '#047857';
-        });
+          if (isSelectedForce(d)) return '#f59e0b';
+          if (isMatchForce(d)) return '#3b82f6';
+          return '#14b8a6';
+        })
+        .attr("stroke-width", d => isSelectedForce(d) ? 3 : 2);
 
       g.selectAll<SVGTextElement, ForceNode>(".node text")
         .transition().duration(300)
-        .style("font-weight", d => isSelectedForce(d) || isMatchForce(d) ? "bold" : "500");
+        .attr("fill", d => {
+          if (isSelectedForce(d)) return '#92400e';
+          if (isMatchForce(d)) return '#1e3a8a';
+          return '#134e4a';
+        })
+        .style("font-weight", d => isSelectedForce(d) || isMatchForce(d) ? "bold" : "600");
     } else if (layoutMode === 'blocks') {
       // Blocks layout matching
       type BlockNode = { id: string };
@@ -902,25 +902,32 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
         .transition().duration(300)
         .attr("opacity", d => !isSearching || isMatch(d) ? 1 : 0.3);
 
-      // Update circle styles
-      g.selectAll<SVGCircleElement, d3.HierarchyNode<HierarchicalNode>>(".node circle")
+      // Update ellipse styles
+      g.selectAll<SVGEllipseElement, d3.HierarchyNode<HierarchicalNode>>(".node ellipse")
         .transition().duration(300)
-        .attr("r", d => isSelected(d) ? 12 : (isMatch(d) ? 10 : 6))
+        .attr("rx", d => isSelected(d) ? 75 : (isMatch(d) ? 70 : 60))
+        .attr("ry", d => isSelected(d) ? 32 : (isMatch(d) ? 30 : 25))
         .attr("fill", d => {
-          if (isSelected(d)) return '#a855f7';
-          if (isMatch(d)) return '#3b82f6';
-          return '#10b981';
+          if (isSelected(d)) return '#fef3c7';
+          if (isMatch(d)) return '#dbeafe';
+          return '#f0fdfa';
         })
         .attr("stroke", d => {
-          if (isSelected(d)) return '#7e22ce';
-          if (isMatch(d)) return '#1d4ed8';
-          return '#047857';
-        });
+          if (isSelected(d)) return '#f59e0b';
+          if (isMatch(d)) return '#3b82f6';
+          return '#14b8a6';
+        })
+        .attr("stroke-width", d => isSelected(d) ? 3 : 2);
 
       // Update text styles
       g.selectAll<SVGTextElement, d3.HierarchyNode<HierarchicalNode>>(".node text")
         .transition().duration(300)
-        .style("font-weight", d => isSelected(d) || isMatch(d) ? "bold" : "500");
+        .attr("fill", d => {
+          if (isSelected(d)) return '#92400e';
+          if (isMatch(d)) return '#1e3a8a';
+          return '#134e4a';
+        })
+        .style("font-weight", d => isSelected(d) || isMatch(d) ? "bold" : "600");
     }
 
   }, [searchQuery, selectedNode, dimensions.width, siblingSpacing, generationSpacing, orientation, layoutMode]);
