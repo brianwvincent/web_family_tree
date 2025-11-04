@@ -387,13 +387,6 @@ The image should convey a sense of legacy, connection, and time. Use the visual 
                       CSV
                     </button>
                     <button
-                      onClick={handleDownloadGEDCOM}
-                      className="flex items-center justify-center px-4 py-3 bg-orange-600/80 hover:bg-orange-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
-                    >
-                      <DownloadIcon className="w-5 h-5 mr-2" />
-                      GEDCOM
-                    </button>
-                    <button
                       onClick={handleDownloadSVG}
                       className="flex items-center justify-center px-4 py-3 bg-sky-600/80 hover:bg-sky-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
                     >
@@ -416,6 +409,13 @@ The image should convey a sense of legacy, connection, and time. Use the visual 
                     </button>
                   </div>
                   <div className="border-t border-gray-700/50 my-2"></div>
+                  <button
+                    onClick={handleDownloadGEDCOM}
+                    className="w-full flex items-center justify-center px-4 py-3 bg-orange-600/80 hover:bg-orange-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
+                  >
+                    <DownloadIcon className="w-5 h-5 mr-2" />
+                    GEDCOM
+                  </button>
                   <button
                     onClick={handlePreparePrompt}
                     className="w-full flex items-center justify-center px-4 py-3 bg-amber-600/80 hover:bg-amber-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"

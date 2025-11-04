@@ -141,6 +141,30 @@ const App: React.FC = () => {
         childName = existingNodeName;
     }
 
+    // Check for circular reference: would adding this link create a cycle?
+    const wouldCreateCycle = (parent: string, child: string): boolean => {
+        // Check if child is already an ancestor of parent
+        const findAncestors = (node: string, visited = new Set<string>()): Set<string> => {
+            if (visited.has(node)) return visited; // Already visited, prevent infinite loop
+            visited.add(node);
+            
+            const parentLinks = links.filter(l => l.target.toLowerCase() === node.toLowerCase());
+            parentLinks.forEach(link => {
+                findAncestors(link.source, visited);
+            });
+            
+            return visited;
+        };
+        
+        const ancestors = findAncestors(parent);
+        return ancestors.has(child.toLowerCase()) || ancestors.has(child);
+    };
+
+    if (wouldCreateCycle(parentName, childName)) {
+        setError(`Cannot add this relationship: ${childName} is already an ancestor of ${parentName}. This would create a circular reference.`);
+        return;
+    }
+
     if (links.some(l => l.target.toLowerCase() === childName.toLowerCase())) {
         setError(`${childName} already has a parent. A person can only have one parent in this tree structure.`);
         return;
