@@ -10,7 +10,7 @@ interface FamilyTreeProps {
   siblingSpacing: number;
   generationSpacing: number;
   orientation: 'horizontal' | 'vertical';
-  layoutMode: 'tree' | 'force';
+  layoutMode: 'tree' | 'force' | 'blocks';
   nodes: AppNode[];
   links: AppLink[];
 }
@@ -129,8 +129,8 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
   useEffect(() => {
     if (!svgRef.current || dimensions.width === 0) return;
     
-    // For force mode, we need nodes and links instead of hierarchical data
-    if (layoutMode === 'force' && (!nodes || nodes.length === 0)) return;
+    // For force and blocks mode, we need nodes and links instead of hierarchical data
+    if ((layoutMode === 'force' || layoutMode === 'blocks') && (!nodes || nodes.length === 0)) return;
     if (layoutMode === 'tree' && !data) return;
 
     const svg = d3.select(svgRef.current);
@@ -146,6 +146,257 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
             onNodeSelect(null);
         }
     });
+
+    // Blocks layout
+    if (layoutMode === 'blocks') {
+      const blockWidth = 180;
+      const blockHeight = 80;
+      const horizontalSpacing = 40 * siblingSpacing;
+      const verticalSpacing = 40 * generationSpacing;
+
+      // Build a hierarchy to determine levels
+      const nodeMap = new Map(nodes.map(n => [n.id, n]));
+      const childToParent = new Map<string, string>();
+      links.forEach(l => {
+        childToParent.set(l.target, l.source);
+      });
+
+      // Find root nodes (nodes with no parents)
+      const roots = nodes.filter(n => !childToParent.has(n.id));
+      
+      // Build levels
+      type BlockNode = { id: string; level: number; index: number };
+      const levelArrays: BlockNode[][] = [];
+      const visited = new Set<string>();
+      const nodeToBlockNode = new Map<string, BlockNode>();
+
+      const assignLevels = (nodeId: string, level: number) => {
+        if (visited.has(nodeId)) return;
+        visited.add(nodeId);
+        
+        // Ensure the level array exists
+        while (levelArrays.length <= level) {
+          levelArrays.push([]);
+        }
+        
+        const blockNode: BlockNode = { id: nodeId, level, index: levelArrays[level].length };
+        levelArrays[level].push(blockNode);
+        nodeToBlockNode.set(nodeId, blockNode);
+
+        // Process children
+        const children = links.filter(l => l.source === nodeId).map(l => l.target);
+        children.forEach(childId => assignLevels(childId, level + 1));
+      };
+
+      roots.forEach(root => assignLevels(root.id, 0));
+      
+      // Handle orphaned nodes (in case of disconnected graph)
+      nodes.forEach(n => {
+        if (!visited.has(n.id)) {
+          assignLevels(n.id, 0);
+        }
+      });
+
+      // Calculate positions - center children under parents
+      const blockNodes = levelArrays.flat().filter(bn => bn && bn.id);
+      
+      // Create a map to store x positions
+      const xPositions = new Map<string, number>();
+      
+      // Build parent-children relationships
+      const childrenMap = new Map<string, string[]>();
+      links.forEach(link => {
+        if (!childrenMap.has(link.source)) {
+          childrenMap.set(link.source, []);
+        }
+        childrenMap.get(link.source)!.push(link.target);
+      });
+
+      // Position root nodes first (nodes already identified earlier)
+      let currentX = 0;
+      
+      const positionNode = (nodeId: string, parentX?: number): number => {
+        const children = childrenMap.get(nodeId) || [];
+        
+        if (children.length === 0) {
+          // Leaf node - position it
+          if (parentX !== undefined) {
+            xPositions.set(nodeId, parentX);
+            return parentX;
+          } else {
+            const x = currentX;
+            currentX += blockWidth + horizontalSpacing;
+            xPositions.set(nodeId, x);
+            return x;
+          }
+        } else {
+          // Node with children - position children first, then center this node
+          const childPositions = children.map(childId => positionNode(childId, undefined));
+          const minChildX = Math.min(...childPositions);
+          const maxChildX = Math.max(...childPositions);
+          const centerX = (minChildX + maxChildX) / 2;
+          xPositions.set(nodeId, centerX);
+          return centerX;
+        }
+      };
+
+      // Position each root and its descendants
+      roots.forEach(root => {
+        positionNode(root.id);
+        currentX += blockWidth + horizontalSpacing; // Add space between root trees
+      });
+
+      // Calculate overall bounds and center the tree
+      const allXPositions = Array.from(xPositions.values());
+      const minX = Math.min(...allXPositions);
+      const maxX = Math.max(...allXPositions);
+      const treeWidth = maxX - minX + blockWidth;
+      const offsetX = (width - treeWidth) / 2 - minX;
+
+      // Apply offset to center the tree
+      xPositions.forEach((x, nodeId) => {
+        xPositions.set(nodeId, x + offsetX);
+      });
+
+      const totalHeight = levelArrays.length * (blockHeight + verticalSpacing);
+      const startY = (height - totalHeight) / 2;
+
+      const zoom = d3.zoom<SVGSVGElement, unknown>()
+        .scaleExtent([0.1, 3])
+        .on("zoom", (event) => {
+          g.attr("transform", event.transform);
+        });
+
+      svg.call(zoom);
+
+      // Text wrapping function for blocks
+      const wrapText = (textElement: d3.Selection<SVGTextElement, BlockNode, SVGGElement, unknown>, maxWidth: number) => {
+        const text = textElement.node();
+        if (!text) return;
+        const words = text.textContent?.split(/\s+/) || [];
+        text.textContent = '';
+
+        let line: string[] = [];
+        let lineNumber = 0;
+        const lineHeight = 1.1;
+        const y = parseFloat(textElement.attr('y'));
+        const dy = parseFloat(textElement.attr('dy'));
+
+        words.forEach((word) => {
+          line.push(word);
+          text.textContent = line.join(' ');
+          if (text.getComputedTextLength() > maxWidth && line.length > 1) {
+            line.pop();
+            const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+            tspan.setAttribute('x', textElement.attr('x'));
+            tspan.setAttribute('y', String(y));
+            tspan.setAttribute('dy', `${lineNumber * lineHeight + dy}em`);
+            tspan.textContent = line.join(' ');
+            text.appendChild(tspan);
+            line = [word];
+            lineNumber++;
+          }
+        });
+
+        if (line.length > 0) {
+          const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+          tspan.setAttribute('x', textElement.attr('x'));
+          tspan.setAttribute('y', String(y));
+          tspan.setAttribute('dy', `${lineNumber * lineHeight + dy}em`);
+          tspan.textContent = line.join(' ');
+          text.appendChild(tspan);
+        }
+      };
+
+      // Draw links
+      const link = g.selectAll(".link")
+        .data(links)
+        .enter()
+        .append("line")
+        .attr("class", "link")
+        .attr("x1", d => {
+          const sourceX = xPositions.get(d.source);
+          if (sourceX === undefined) return 0;
+          return sourceX + blockWidth / 2;
+        })
+        .attr("y1", d => {
+          const source = nodeToBlockNode.get(d.source);
+          if (!source) return 0;
+          return startY + source.level * (blockHeight + verticalSpacing) + blockHeight;
+        })
+        .attr("x2", d => {
+          const targetX = xPositions.get(d.target);
+          if (targetX === undefined) return 0;
+          return targetX + blockWidth / 2;
+        })
+        .attr("y2", d => {
+          const target = nodeToBlockNode.get(d.target);
+          if (!target) return 0;
+          return startY + target.level * (blockHeight + verticalSpacing);
+        })
+        .attr("stroke", "#4b5563")
+        .attr("stroke-width", 2)
+        .attr("opacity", 1);
+
+      // Draw blocks
+      const node = g.selectAll(".node")
+        .data(blockNodes)
+        .enter()
+        .append("g")
+        .attr("class", "node")
+        .attr("transform", d => {
+          if (!d || !d.id) return `translate(0,0)`;
+          const x = xPositions.get(d.id);
+          if (x === undefined) return `translate(0,0)`;
+          const y = startY + d.level * (blockHeight + verticalSpacing);
+          return `translate(${x},${y})`;
+        })
+        .style("cursor", "pointer")
+        .on("click", (event, d) => {
+          if (!d || !d.id) return;
+          event.stopPropagation();
+          onNodeSelect(d.id === selectedNode ? null : d.id);
+        });
+
+      // Add block rectangles
+      node.append("rect")
+        .attr("width", blockWidth)
+        .attr("height", blockHeight)
+        .attr("rx", 8)
+        .attr("ry", 8)
+        .attr("fill", d => (d && d.id === selectedNode) ? "#10b981" : "#e0f2fe")
+        .attr("stroke", d => {
+          if (!d || !d.id) return "#0284c7";
+          if (d.id === selectedNode) return "#059669";
+          if (searchQuery && d.id.toLowerCase().includes(searchQuery.toLowerCase())) return "#f59e0b";
+          return "#0284c7";
+        })
+        .attr("stroke-width", d => (d && d.id === selectedNode) ? 3 : 2)
+        .attr("class", "node-rect");
+
+      // Add text
+      const textElements = node.append("text")
+        .attr("x", blockWidth / 2)
+        .attr("y", blockHeight / 2)
+        .attr("dy", "0.35em")
+        .attr("text-anchor", "middle")
+        .attr("fill", "#0c4a6e")
+        .attr("font-size", "14px")
+        .attr("font-weight", "500")
+        .text(d => (d && d.id) ? d.id : '');
+
+      // Apply text wrapping to each text element
+      textElements.nodes().forEach((textNode, i) => {
+        const blockNode = blockNodes[i];
+        if (!blockNode || !blockNode.id) return;
+        
+        const textElement = d3.select(textNode) as d3.Selection<SVGTextElement, BlockNode, SVGGElement, unknown>;
+        const maxWidth = blockWidth - 20;
+        wrapText(textElement, maxWidth);
+      });
+
+      return;
+    }
 
     // Force-directed layout
     if (layoutMode === 'force') {
@@ -605,6 +856,35 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
       g.selectAll<SVGTextElement, ForceNode>(".node text")
         .transition().duration(300)
         .style("font-weight", d => isSelectedForce(d) || isMatchForce(d) ? "bold" : "500");
+    } else if (layoutMode === 'blocks') {
+      // Blocks layout matching
+      type BlockNode = { id: string };
+      const isMatchBlock = (d: BlockNode) => 
+        d && d.id && isSearching && d.id.toLowerCase().includes(lowerCaseQuery);
+      const isSelectedBlock = (d: BlockNode) => d && d.id && d.id === selectedNode;
+
+      g.selectAll(".link")
+        .transition().duration(300)
+        .attr("opacity", isSearching ? 0.3 : 1);
+      
+      g.selectAll<SVGGElement, BlockNode>(".node")
+        .transition().duration(300)
+        .attr("opacity", d => !isSearching || isMatchBlock(d) ? 1 : 0.3);
+
+      g.selectAll<SVGRectElement, BlockNode>(".node rect")
+        .transition().duration(300)
+        .attr("fill", d => isSelectedBlock(d) ? "#10b981" : "#e0f2fe")
+        .attr("stroke", d => {
+          if (!d || !d.id) return "#0284c7";
+          if (isSelectedBlock(d)) return "#059669";
+          if (isMatchBlock(d)) return "#f59e0b";
+          return "#0284c7";
+        })
+        .attr("stroke-width", d => isSelectedBlock(d) ? 3 : 2);
+
+      g.selectAll<SVGTextElement, BlockNode>(".node text")
+        .transition().duration(300)
+        .style("font-weight", d => (d && (isSelectedBlock(d) || isMatchBlock(d))) ? "bold" : "500");
     } else {
       // Tree layout matching
       const isMatch = (d: d3.HierarchyNode<HierarchicalNode>) => 

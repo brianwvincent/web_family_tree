@@ -24,16 +24,18 @@ const App: React.FC = () => {
   const [generationSpacing, setGenerationSpacing] = useState(1);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [orientation, setOrientation] = useState<'horizontal' | 'vertical'>('horizontal');
-  const [layoutMode, setLayoutMode] = useState<'tree' | 'force'>('tree');
+  const [layoutMode, setLayoutMode] = useState<'tree' | 'force' | 'blocks'>('tree');
   const familyTreeRef = useRef<FamilyTreeApi>(null);
 
-  type LayoutOption = 'physics' | 'horizontal' | 'vertical';
+  type LayoutOption = 'physics' | 'horizontal' | 'vertical' | 'blocks';
   const [layout, setLayout] = useState<LayoutOption>('horizontal');
 
   const handleLayoutChange = (newLayout: LayoutOption) => {
     setLayout(newLayout);
     if (newLayout === 'physics') {
       setLayoutMode('force');
+    } else if (newLayout === 'blocks') {
+      setLayoutMode('blocks');
     } else {
       setLayoutMode('tree');
       setOrientation(newLayout);
@@ -429,7 +431,7 @@ const App: React.FC = () => {
                   </button>
                   <button
                     onClick={() => handleLayoutChange('physics')}
-                    className={`px-3 py-1.5 text-sm text-white transition-all ${
+                    className={`px-3 py-1.5 text-sm text-white border-r border-gray-600/50 transition-all ${
                       layout === 'physics' 
                         ? 'bg-emerald-600 font-semibold' 
                         : 'hover:bg-gray-700/80'
@@ -437,6 +439,19 @@ const App: React.FC = () => {
                     title="Physics-Based Layout"
                   >
                     ⚛️
+                  </button>
+                  <button
+                    onClick={() => handleLayoutChange('blocks')}
+                    className={`px-3 py-1.5 text-sm transition-all ${
+                      layout === 'blocks' 
+                        ? 'bg-emerald-600 font-semibold text-white' 
+                        : 'hover:bg-gray-700/80 text-sky-400'
+                    }`}
+                    title="Block Layout"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" className="inline-block">
+                      <rect x="2" y="2" width="12" height="12" rx="2" />
+                    </svg>
                   </button>
                 </div>
               </div>
