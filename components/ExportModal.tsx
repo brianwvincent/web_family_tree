@@ -5,6 +5,7 @@ import DownloadIcon from './icons/DownloadIcon';
 import SparklesIcon from './icons/SparklesIcon';
 import { GoogleGenAI, Modality } from "@google/genai";
 import { jsPDF } from 'jspdf';
+import PrintPreviewModal from './PrintPreviewModal';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -21,6 +22,8 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, nodes, links
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [prompt, setPrompt] = useState('');
+  const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false);
+  const [currentSvgData, setCurrentSvgData] = useState<{ svgString: string; width: number; height: number } | null>(null);
 
   if (!isOpen) return null;
 
@@ -130,39 +133,16 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, nodes, links
   const handleDownloadSVG = () => {
     const svgData = familyTreeRef.current?.getSVGData();
     if (svgData) {
-      const blob = new Blob([svgData.svgString], { type: 'image/svg+xml' });
-      downloadFile(blob, 'family-tree.svg');
+      setCurrentSvgData(svgData);
+      setIsPrintPreviewOpen(true);
     }
   };
 
   const handleDownloadPNG = () => {
     const svgData = familyTreeRef.current?.getSVGData();
     if (svgData) {
-      const { svgString, width, height } = svgData;
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      const img = new Image();
-      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-      const url = URL.createObjectURL(svgBlob);
-
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0, width, height);
-        URL.revokeObjectURL(url);
-        canvas.toBlob((blob) => {
-          if (blob) {
-            downloadFile(blob, 'family-tree.png');
-          }
-        }, 'image/png');
-      };
-      img.onerror = () => {
-        console.error("Error loading SVG image for PNG conversion.");
-        URL.revokeObjectURL(url);
-      };
-      img.src = url;
+      setCurrentSvgData(svgData);
+      setIsPrintPreviewOpen(true);
     }
   };
 
@@ -203,6 +183,78 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, nodes, links
       };
       img.src = url;
     }
+  };
+
+  const handlePrintPreviewDownload = (format: 'svg' | 'png' | 'pdf', width: number, height: number) => {
+    if (!currentSvgData) return;
+
+    const { svgString } = currentSvgData;
+
+    if (format === 'svg') {
+      const blob = new Blob([svgString], { type: 'image/svg+xml' });
+      downloadFile(blob, 'family-tree.svg');
+      return;
+    }
+
+    // For PNG and PDF, we need to render at the specified dimensions
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Fill with white background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const img = new Image();
+    const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+
+    img.onload = () => {
+      // Calculate scaling to fit the tree within the canvas with padding
+      const padding = 40;
+      const availableWidth = canvas.width - padding * 2;
+      const availableHeight = canvas.height - padding * 2;
+      
+      const scaleX = availableWidth / currentSvgData.width;
+      const scaleY = availableHeight / currentSvgData.height;
+      const scale = Math.min(scaleX, scaleY);
+      
+      const scaledWidth = currentSvgData.width * scale;
+      const scaledHeight = currentSvgData.height * scale;
+      
+      // Center the image
+      const x = (canvas.width - scaledWidth) / 2;
+      const y = (canvas.height - scaledHeight) / 2;
+      
+      ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
+      URL.revokeObjectURL(url);
+
+      if (format === 'png') {
+        canvas.toBlob((blob) => {
+          if (blob) {
+            downloadFile(blob, 'family-tree.png');
+          }
+        }, 'image/png');
+      } else if (format === 'pdf') {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF({
+          orientation: width > height ? 'landscape' : 'portrait',
+          unit: 'px',
+          format: [width, height]
+        });
+        pdf.addImage(imgData, 'PNG', 0, 0, width, height);
+        pdf.save('family-tree.pdf');
+      }
+    };
+
+    img.onerror = () => {
+      console.error("Error loading SVG image for conversion.");
+      URL.revokeObjectURL(url);
+    };
+
+    img.src = url;
   };
 
   const handlePreparePrompt = () => {
@@ -382,22 +434,13 @@ The image should convey a sense of legacy, connection, and time. Use the visual 
                   {/* File Formats Section */}
                   <div>
                     <h3 className="text-sm font-semibold text-gray-300 mb-2 uppercase tracking-wide">File Formats</h3>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        onClick={handleDownloadCSV}
-                        className="flex items-center justify-center px-4 py-3 bg-emerald-600/80 hover:bg-emerald-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
-                      >
-                        <DownloadIcon className="w-5 h-5 mr-2" />
-                        CSV
-                      </button>
-                      <button
-                        onClick={handleDownloadPDF}
-                        className="flex items-center justify-center px-4 py-3 bg-red-600/80 hover:bg-red-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
-                      >
-                        <DownloadIcon className="w-5 h-5 mr-2" />
-                        PDF
-                      </button>
-                    </div>
+                    <button
+                      onClick={handleDownloadCSV}
+                      className="w-full flex items-center justify-center px-4 py-3 bg-emerald-600/80 hover:bg-emerald-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
+                    >
+                      <DownloadIcon className="w-5 h-5 mr-2" />
+                      CSV
+                    </button>
                   </div>
 
                   {/* Images Section */}
@@ -419,6 +462,13 @@ The image should convey a sense of legacy, connection, and time. Use the visual 
                         PNG
                       </button>
                     </div>
+                    <button
+                      onClick={handleDownloadPDF}
+                      className="w-full flex items-center justify-center px-4 py-3 bg-red-600/80 hover:bg-red-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300 mt-3"
+                    >
+                      <DownloadIcon className="w-5 h-5 mr-2" />
+                      PDF
+                    </button>
                   </div>
 
                   <div className="border-t border-gray-700/50 my-2"></div>
@@ -452,27 +502,40 @@ The image should convey a sense of legacy, connection, and time. Use the visual 
   }
 
   return (
-    <div
-      className="fixed inset-0 bg-gray-900/80 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity"
-      onClick={handleClose}
-    >
+    <>
       <div
-        className="bg-gray-800 rounded-lg shadow-2xl p-8 w-full max-w-md m-4 border border-gray-700/50"
-        onClick={(e) => e.stopPropagation()}
+        className="fixed inset-0 bg-gray-900/80 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity"
+        onClick={handleClose}
       >
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-white">Export &amp; Generate</h2>
-          <button
-            onClick={handleClose}
-            className="p-1 rounded-full text-gray-500 hover:bg-gray-700 hover:text-white transition-colors"
-            aria-label="Close modal"
-          >
-            <CloseIcon className="w-6 h-6" />
-          </button>
+        <div
+          className="bg-gray-800 rounded-lg shadow-2xl p-8 w-full max-w-md m-4 border border-gray-700/50"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-white">Export &amp; Generate</h2>
+            <button
+              onClick={handleClose}
+              className="p-1 rounded-full text-gray-500 hover:bg-gray-700 hover:text-white transition-colors"
+              aria-label="Close modal"
+            >
+              <CloseIcon className="w-6 h-6" />
+            </button>
+          </div>
+          {renderContent()}
         </div>
-        {renderContent()}
       </div>
-    </div>
+
+      {currentSvgData && (
+        <PrintPreviewModal
+          isOpen={isPrintPreviewOpen}
+          onClose={() => setIsPrintPreviewOpen(false)}
+          svgString={currentSvgData.svgString}
+          originalWidth={currentSvgData.width}
+          originalHeight={currentSvgData.height}
+          onDownload={handlePrintPreviewDownload}
+        />
+      )}
+    </>
   );
 };
 
