@@ -378,51 +378,74 @@ The image should convey a sense of legacy, connection, and time. Use the visual 
                   <p className="text-gray-400">
                     Download your family tree for sharing or archiving, or create a unique AI-generated image.
                   </p>
-                  <div className="grid grid-cols-2 gap-3">
+                  
+                  {/* File Formats Section */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-300 mb-2 uppercase tracking-wide">File Formats</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={handleDownloadCSV}
+                        className="flex items-center justify-center px-4 py-3 bg-emerald-600/80 hover:bg-emerald-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
+                      >
+                        <DownloadIcon className="w-5 h-5 mr-2" />
+                        CSV
+                      </button>
+                      <button
+                        onClick={handleDownloadPDF}
+                        className="flex items-center justify-center px-4 py-3 bg-red-600/80 hover:bg-red-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
+                      >
+                        <DownloadIcon className="w-5 h-5 mr-2" />
+                        PDF
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Images Section */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-300 mb-2 uppercase tracking-wide">Images</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={handleDownloadSVG}
+                        className="flex items-center justify-center px-4 py-3 bg-sky-600/80 hover:bg-sky-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
+                      >
+                        <DownloadIcon className="w-5 h-5 mr-2" />
+                        SVG
+                      </button>
+                      <button
+                        onClick={handleDownloadPNG}
+                        className="flex items-center justify-center px-4 py-3 bg-purple-600/80 hover:bg-purple-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
+                      >
+                        <DownloadIcon className="w-5 h-5 mr-2" />
+                        PNG
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-gray-700/50 my-2"></div>
+
+                  {/* Premium Features Section */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-300 mb-2 uppercase tracking-wide">Premium Formats</h3>
                     <button
-                      onClick={handleDownloadCSV}
-                      className="flex items-center justify-center px-4 py-3 bg-emerald-600/80 hover:bg-emerald-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
+                      onClick={handleDownloadGEDCOM}
+                      className="w-full flex items-center justify-center px-4 py-3 bg-orange-600/80 hover:bg-orange-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
                     >
                       <DownloadIcon className="w-5 h-5 mr-2" />
-                      CSV
-                    </button>
-                    <button
-                      onClick={handleDownloadSVG}
-                      className="flex items-center justify-center px-4 py-3 bg-sky-600/80 hover:bg-sky-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
-                    >
-                      <DownloadIcon className="w-5 h-5 mr-2" />
-                      SVG
-                    </button>
-                    <button
-                      onClick={handleDownloadPNG}
-                      className="flex items-center justify-center px-4 py-3 bg-purple-600/80 hover:bg-purple-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
-                    >
-                      <DownloadIcon className="w-5 h-5 mr-2" />
-                      PNG
-                    </button>
-                    <button
-                      onClick={handleDownloadPDF}
-                      className="flex items-center justify-center px-4 py-3 bg-red-600/80 hover:bg-red-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
-                    >
-                      <DownloadIcon className="w-5 h-5 mr-2" />
-                      PDF
+                      GEDCOM
                     </button>
                   </div>
-                  <div className="border-t border-gray-700/50 my-2"></div>
-                  <button
-                    onClick={handleDownloadGEDCOM}
-                    className="w-full flex items-center justify-center px-4 py-3 bg-orange-600/80 hover:bg-orange-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
-                  >
-                    <DownloadIcon className="w-5 h-5 mr-2" />
-                    GEDCOM
-                  </button>
-                  <button
-                    onClick={handlePreparePrompt}
-                    className="w-full flex items-center justify-center px-4 py-3 bg-amber-600/80 hover:bg-amber-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
-                  >
-                    <SparklesIcon className="w-5 h-5 mr-2" />
-                    Generate AI Image
-                  </button>
+
+                  {/* AI Images Section */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-300 mb-2 uppercase tracking-wide">AI Images</h3>
+                    <button
+                      onClick={handlePreparePrompt}
+                      className="w-full flex items-center justify-center px-4 py-3 bg-amber-600/80 hover:bg-amber-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
+                    >
+                      <SparklesIcon className="w-5 h-5 mr-2" />
+                      Generate AI Image
+                    </button>
+                  </div>
                 </div>
             );
     }
