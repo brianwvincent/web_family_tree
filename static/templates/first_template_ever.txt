@@ -1,0 +1,5 @@
+Create an artistic and symbolic image representing the following family tree structure:
+
+{family_tree_json}
+
+The image should convey a sense of legacy, connection, and time. Use the visual metaphor of a sprawling, ancient tree with glowing patterns on its bark, under a celestial sky. The style should be digital painting, epic, detailed, and magical.

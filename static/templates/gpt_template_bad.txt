@@ -1,0 +1,28 @@
+Prompt:
+Create an artistic and symbolic image.
+
+Use the following JSON structure as the source of truth for names and relationships:
+
+The image must include every "name" value from the JSON clearly and legibly within the composition — no names may be missing or obscured. Arrange them in a way that visually conveys their relationships (e.g., parent-child, siblings, descendants) according to the JSON structure.
+
+Design & Clarity Requirements:
+
+Each person’s name must appear exactly as written in the JSON, once per individual.
+
+Use connecting lines, branches, or flow lines to illustrate family relationships.
+
+Maintain readable text labels and clear hierarchy (ancestors above, descendants below).
+
+Integrate the design and typography with the {theme} art style (colors, textures, atmosphere, motifs).
+
+Keep the background cohesive and non-distracting so the family tree remains the focus.
+
+Render at high resolution and with balanced composition.
+
+Output goal:
+A beautiful, themed family tree image that faithfully includes all given names and relationships from the JSON.
+
+
+Theme: 
+The image should convey a sense of legacy, connection, and time. Use the visual metaphor of a sprawling, ancient tree with glowing patterns on its bark, under a celestial sky. The style should be digital painting, epic, detailed, and magical.
+

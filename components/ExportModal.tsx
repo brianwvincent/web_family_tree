@@ -257,44 +257,54 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, nodes, links
     img.src = url;
   };
 
-  const handlePreparePrompt = () => {
-    const nodeMap: { [key: string]: { name: string; children: any[] } } = {};
-    nodes.forEach(node => {
-        nodeMap[node.id] = { name: node.id, children: [] };
-    });
+  const handlePreparePrompt = async () => {
+    try {
+      // Build family tree JSON structure
+      const nodeMap: { [key: string]: { name: string; children: any[] } } = {};
+      nodes.forEach(node => {
+          nodeMap[node.id] = { name: node.id, children: [] };
+      });
 
-    const childrenIds = new Set<string>();
-    links.forEach(link => {
-        if (nodeMap[link.source] && nodeMap[link.target]) {
-            nodeMap[link.source].children.push(nodeMap[link.target]);
-            childrenIds.add(link.target);
-        }
-    });
+      const childrenIds = new Set<string>();
+      links.forEach(link => {
+          if (nodeMap[link.source] && nodeMap[link.target]) {
+              nodeMap[link.source].children.push(nodeMap[link.target]);
+              childrenIds.add(link.target);
+          }
+      });
 
-    const roots = Object.values(nodeMap).filter(node => !childrenIds.has(node.name));
+      const roots = Object.values(nodeMap).filter(node => !childrenIds.has(node.name));
 
-    let treeJsonStructure: any;
-    if (roots.length === 0) {
-        treeJsonStructure = Object.keys(nodeMap).length > 0 ? Object.values(nodeMap)[0] : {};
-    } else if (roots.length > 1) {
-        treeJsonStructure = { name: "Family", children: roots };
-    } else {
-        treeJsonStructure = roots[0];
+      let treeJsonStructure: any;
+      if (roots.length === 0) {
+          treeJsonStructure = Object.keys(nodeMap).length > 0 ? Object.values(nodeMap)[0] : {};
+      } else if (roots.length > 1) {
+          treeJsonStructure = { name: "Family", children: roots };
+      } else {
+          treeJsonStructure = roots[0];
+      }
+
+      const replacer = (key: string, value: any) => (key === 'children' && Array.isArray(value) && value.length === 0) ? undefined : value;
+      const treeJsonString = JSON.stringify(treeJsonStructure, replacer, 2);
+
+      // Fetch template from server
+      const response = await fetch('/api/prompt-template');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Failed to load template' }));
+        throw new Error(errorData.detail || `Failed to load template: ${response.status}`);
+      }
+
+      const { template_content } = await response.json();
+
+      // Replace placeholder with actual tree JSON
+      const generatedPrompt = template_content.replace('{family_tree_json}', treeJsonString);
+      
+      setPrompt(generatedPrompt);
+      setView('prompt');
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : 'Failed to prepare prompt');
+      setView('error');
     }
-
-    const replacer = (key: string, value: any) => (key === 'children' && Array.isArray(value) && value.length === 0) ? undefined : value;
-    const treeJsonString = JSON.stringify(treeJsonStructure, replacer, 2);
-
-    const generatedPrompt = `Create an artistic and symbolic image representing the following family tree structure:
-
-\`\`\`json
-${treeJsonString}
-\`\`\`
-
-The image should convey a sense of legacy, connection, and time. Use the visual metaphor of a sprawling, ancient tree with glowing patterns on its bark, under a celestial sky. The style should be digital painting, epic, detailed, and magical.`;
-    
-    setPrompt(generatedPrompt);
-    setView('prompt');
   }
 
   const handleGenerateImage = async () => {
