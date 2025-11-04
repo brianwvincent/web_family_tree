@@ -317,32 +317,31 @@ const App: React.FC = () => {
       />
       <div className="flex flex-col md:flex-row h-screen bg-gray-900 text-gray-100 font-sans">
         <aside className="w-full md:w-80 lg:w-96 bg-gray-800/50 p-6 border-b md:border-b-0 md:border-r border-gray-700/50 shadow-lg flex-shrink-0 overflow-y-auto">
-          <header className="flex items-center justify-between mb-8">
-            <a href="#/" className="flex items-center" title="Back to Home Page">
+          <header className="mb-6">
+            <a href="#/" className="flex items-center justify-center" title="Back to Home Page">
               <Logo className="w-10 h-10" />
               <h1 className="text-2xl font-bold ml-2 text-white">HeirGraph</h1>
             </a>
-            <div className="flex items-center gap-1">
-              {nodes.length > 0 && (
-                <>
-                  <button
-                    onClick={() => setIsExportModalOpen(true)}
-                    className="p-2 rounded-full text-gray-400 hover:bg-emerald-600/50 hover:text-white transition-colors"
-                    aria-label="Export Tree"
-                    title="Export Tree"
-                  >
-                    <ExportIcon className="w-6 h-6" />
-                  </button>
-                  <button
-                      onClick={() => handleResetTree(false)}
-                      className="p-2 rounded-full text-gray-400 hover:bg-red-600/50 hover:text-white transition-colors"
-                      aria-label="Clear Tree"
-                      title="Clear Tree"
-                  >
-                      <ResetIcon className="w-6 h-6" />
-                  </button>
-                </>
-              )}
+          </header>
+          
+          {nodes.length > 0 && (
+            <div className="flex items-center justify-center gap-2 mb-6 pb-6 border-b border-gray-700/50">
+              <button
+                onClick={() => setIsExportModalOpen(true)}
+                className="p-2 rounded-full text-gray-400 hover:bg-emerald-600/50 hover:text-white transition-colors"
+                aria-label="Export Tree"
+                title="Export Tree"
+              >
+                <ExportIcon className="w-6 h-6" />
+              </button>
+              <button
+                  onClick={() => handleResetTree(false)}
+                  className="p-2 rounded-full text-gray-400 hover:bg-red-600/50 hover:text-white transition-colors"
+                  aria-label="Clear Tree"
+                  title="Clear Tree"
+              >
+                  <ResetIcon className="w-6 h-6" />
+              </button>
               <button
                 onClick={() => handleResetTree(true)}
                 className="p-2 rounded-full text-gray-400 hover:bg-gray-700 hover:text-white transition-colors"
@@ -352,7 +351,8 @@ const App: React.FC = () => {
                 <HomeIcon className="w-6 h-6" />
               </button>
             </div>
-          </header>
+          )}
+          
           <Controls 
               onFileUpload={handleFileUpload}
               onManualAdd={handleManualAdd}
@@ -406,12 +406,12 @@ const App: React.FC = () => {
                   onSearch={handleSearch}
               />
               <div className="absolute top-6 left-6 z-10">
-                <div className="flex bg-gray-800/80 backdrop-blur-sm border border-gray-600/50 rounded-lg shadow-lg overflow-hidden">
+                <div className="flex bg-gray-800/90 backdrop-blur-sm border-2 border-gray-600/60 rounded-lg shadow-xl overflow-hidden">
                   <button
                     onClick={() => handleLayoutChange('horizontal')}
-                    className={`px-3 py-1.5 text-sm text-white transition-all ${
+                    className={`px-4 py-2.5 text-base text-white transition-all ${
                       layout === 'horizontal' 
-                        ? 'bg-emerald-600 font-semibold' 
+                        ? 'bg-emerald-600 font-semibold shadow-inner' 
                         : 'hover:bg-gray-700/80'
                     }`}
                     title="Left-to-Right Tree"
@@ -420,9 +420,9 @@ const App: React.FC = () => {
                   </button>
                   <button
                     onClick={() => handleLayoutChange('vertical')}
-                    className={`px-3 py-1.5 text-sm text-white border-x border-gray-600/50 transition-all ${
+                    className={`px-4 py-2.5 text-base text-white border-x border-gray-600/50 transition-all ${
                       layout === 'vertical' 
-                        ? 'bg-emerald-600 font-semibold' 
+                        ? 'bg-emerald-600 font-semibold shadow-inner' 
                         : 'hover:bg-gray-700/80'
                     }`}
                     title="Top-to-Bottom Tree"
@@ -431,9 +431,9 @@ const App: React.FC = () => {
                   </button>
                   <button
                     onClick={() => handleLayoutChange('physics')}
-                    className={`px-3 py-1.5 text-sm text-white border-r border-gray-600/50 transition-all ${
+                    className={`px-4 py-2.5 text-base text-white border-r border-gray-600/50 transition-all ${
                       layout === 'physics' 
-                        ? 'bg-emerald-600 font-semibold' 
+                        ? 'bg-emerald-600 font-semibold shadow-inner' 
                         : 'hover:bg-gray-700/80'
                     }`}
                     title="Physics-Based Layout"
@@ -442,14 +442,14 @@ const App: React.FC = () => {
                   </button>
                   <button
                     onClick={() => handleLayoutChange('blocks')}
-                    className={`px-3 py-1.5 text-sm transition-all ${
+                    className={`px-4 py-2.5 text-base transition-all ${
                       layout === 'blocks' 
-                        ? 'bg-emerald-600 font-semibold text-white' 
+                        ? 'bg-emerald-600 font-semibold text-white shadow-inner' 
                         : 'hover:bg-gray-700/80 text-sky-400'
                     }`}
                     title="Block Layout"
                   >
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" className="inline-block">
+                    <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" className="inline-block">
                       <rect x="2" y="2" width="12" height="12" rx="2" />
                     </svg>
                   </button>
