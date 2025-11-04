@@ -423,8 +423,39 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
         target: l.target 
       }));
 
-      // Identify leaf nodes (nodes with no children)
+      // Calculate depth from root for each node
+      const nodeDepth = new Map<string, number>();
       const hasChildren = new Set(links.map(l => l.source));
+      const hasParent = new Set(links.map(l => l.target));
+      
+      // Find root nodes (no parents)
+      const rootNodes = nodes.filter(n => !hasParent.has(n.id));
+      
+      // BFS to calculate depth
+      const queue: Array<{ id: string; depth: number }> = rootNodes.map(n => ({ id: n.id, depth: 0 }));
+      const visited = new Set<string>();
+      
+      while (queue.length > 0) {
+        const current = queue.shift()!;
+        if (visited.has(current.id)) continue;
+        visited.add(current.id);
+        nodeDepth.set(current.id, current.depth);
+        
+        // Add children to queue
+        links.filter(l => l.source === current.id).forEach(l => {
+          if (!visited.has(l.target)) {
+            queue.push({ id: l.target, depth: current.depth + 1 });
+          }
+        });
+      }
+      
+      // Set depth for any unvisited nodes
+      forceNodes.forEach(n => {
+        if (!nodeDepth.has(n.id)) {
+          nodeDepth.set(n.id, 0);
+        }
+      });
+      
       const leafNodes = new Set(nodes.filter(n => !hasChildren.has(n.id)).map(n => n.id));
 
       // Custom radial force to push leaf nodes outward
@@ -446,10 +477,21 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
       const simulation = d3.forceSimulation<ForceNode>(forceNodes)
         .force("link", d3.forceLink<ForceNode, ForceLink>(forceLinks)
           .id(d => d.id)
-          .distance(100 * generationSpacing))
-        .force("charge", d3.forceManyBody().strength(-300 * siblingSpacing))
+          .distance(150 * generationSpacing))
+        .force("charge", d3.forceManyBody()
+          .strength(d => {
+            const depth = nodeDepth.get(d.id) || 0;
+            // Root nodes have stronger charge (more influence)
+            return (-500 - (depth === 0 ? 300 : 0)) * siblingSpacing;
+          }))
         .force("center", d3.forceCenter(width / 2, height / 2))
-        .force("collision", d3.forceCollide().radius(40))
+        .force("collision", d3.forceCollide()
+          .radius(d => {
+            const depth = nodeDepth.get(d.id) || 0;
+            // Root nodes get larger collision radius
+            return depth === 0 ? 85 : 70;
+          })
+          .strength(0.9))
         .force("radial", radialForce);
 
       const zoom = d3.zoom<SVGSVGElement, unknown>()
@@ -497,29 +539,50 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
           event.stopPropagation();
           onNodeSelect(d.id);
         })
-        .on('mouseover', function() {
+        .on('mouseover', function(event, d) {
           d3.select(this).raise();
+          const depth = nodeDepth.get(d.id) || 0;
+          const baseRx = depth === 0 ? 75 : 60;
+          const baseRy = depth === 0 ? 32 : 25;
           d3.select(this).select('ellipse')
             .transition()
             .duration(150)
-            .attr('rx', 70)
-            .attr('ry', 30);
+            .attr('rx', baseRx + 10)
+            .attr('ry', baseRy + 5);
         })
-        .on('mouseout', function() {
+        .on('mouseout', function(event, d) {
+          const depth = nodeDepth.get(d.id) || 0;
+          const baseRx = depth === 0 ? 75 : 60;
+          const baseRy = depth === 0 ? 32 : 25;
           d3.select(this).select('ellipse')
             .transition()
             .duration(150)
-            .attr('rx', 60)
-            .attr('ry', 25);
+            .attr('rx', baseRx)
+            .attr('ry', baseRy);
         });
 
-      // Add ellipse nodes
+      // Add ellipse nodes with size based on depth
       node.append("ellipse")
-        .attr("rx", 60)
-        .attr("ry", 25)
-        .attr("fill", "#f0fdfa")
-        .attr("stroke", "#14b8a6")
-        .attr("stroke-width", 2);
+        .attr("rx", d => {
+          const depth = nodeDepth.get(d.id) || 0;
+          return depth === 0 ? 75 : 60;
+        })
+        .attr("ry", d => {
+          const depth = nodeDepth.get(d.id) || 0;
+          return depth === 0 ? 32 : 25;
+        })
+        .attr("fill", d => {
+          const depth = nodeDepth.get(d.id) || 0;
+          return depth === 0 ? "#fef3c7" : "#f0fdfa";
+        })
+        .attr("stroke", d => {
+          const depth = nodeDepth.get(d.id) || 0;
+          return depth === 0 ? "#f59e0b" : "#14b8a6";
+        })
+        .attr("stroke-width", d => {
+          const depth = nodeDepth.get(d.id) || 0;
+          return depth === 0 ? 3 : 2;
+        });
 
       const maxTextWidth = 100;
       
@@ -565,9 +628,18 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
         .attr("dy", "0.31em")
         .attr("y", 0)
         .attr("text-anchor", "middle")
-        .attr("fill", "#134e4a")
-        .style("font-size", "14px")
-        .style("font-weight", "600")
+        .attr("fill", d => {
+          const depth = nodeDepth.get(d.id) || 0;
+          return depth === 0 ? "#92400e" : "#134e4a";
+        })
+        .style("font-size", d => {
+          const depth = nodeDepth.get(d.id) || 0;
+          return depth === 0 ? "15px" : "14px";
+        })
+        .style("font-weight", d => {
+          const depth = nodeDepth.get(d.id) || 0;
+          return depth === 0 ? "700" : "600";
+        })
         .each(function(d) {
           d3.select(this).text(d.id);
         })
