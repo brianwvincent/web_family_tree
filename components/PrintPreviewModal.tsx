@@ -16,6 +16,7 @@ interface SizeOption {
   width: number;
   height: number;
   unit: string;
+  category: 'document' | 'poster' | 'digital' | 'original';
 }
 
 const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({
@@ -29,19 +30,50 @@ const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
   const sizeOptions: SizeOption[] = [
-    { name: 'Original', width: originalWidth, height: originalHeight, unit: 'px' },
-    { name: 'Letter (8.5" × 11")', width: 2550, height: 3300, unit: 'px' },
-    { name: 'A4 (210mm × 297mm)', width: 2480, height: 3508, unit: 'px' },
-    { name: 'Legal (8.5" × 14")', width: 2550, height: 4200, unit: 'px' },
-    { name: 'Tabloid (11" × 17")', width: 3300, height: 5100, unit: 'px' },
-    { name: 'A3 (297mm × 420mm)', width: 3508, height: 4961, unit: 'px' },
-    { name: 'Square (12" × 12")', width: 3600, height: 3600, unit: 'px' },
-    { name: 'HD (1920 × 1080)', width: 1920, height: 1080, unit: 'px' },
-    { name: '4K (3840 × 2160)', width: 3840, height: 2160, unit: 'px' },
+    // Original
+    { name: 'Original', width: originalWidth, height: originalHeight, unit: 'px', category: 'original' },
+    
+    // Document Sizes - Portrait
+    { name: 'Letter (8.5" × 11")', width: 2550, height: 3300, unit: 'px', category: 'document' },
+    { name: 'A4 (210mm × 297mm)', width: 2480, height: 3508, unit: 'px', category: 'document' },
+    { name: 'Legal (8.5" × 14")', width: 2550, height: 4200, unit: 'px', category: 'document' },
+    { name: 'Tabloid (11" × 17")', width: 3300, height: 5100, unit: 'px', category: 'document' },
+    { name: 'A3 (297mm × 420mm)', width: 3508, height: 4961, unit: 'px', category: 'document' },
+    
+    // Document Sizes - Landscape
+    { name: 'Letter Landscape (11" × 8.5")', width: 3300, height: 2550, unit: 'px', category: 'document' },
+    { name: 'A4 Landscape (297mm × 210mm)', width: 3508, height: 2480, unit: 'px', category: 'document' },
+    { name: 'Legal Landscape (14" × 8.5")', width: 4200, height: 2550, unit: 'px', category: 'document' },
+    { name: 'Tabloid Landscape (17" × 11")', width: 5100, height: 3300, unit: 'px', category: 'document' },
+    { name: 'A3 Landscape (420mm × 297mm)', width: 4961, height: 3508, unit: 'px', category: 'document' },
+    
+    // Poster Sizes
+    { name: 'Small Poster (18" × 24")', width: 5400, height: 7200, unit: 'px', category: 'poster' },
+    { name: 'Medium Poster (24" × 36")', width: 7200, height: 10800, unit: 'px', category: 'poster' },
+    { name: 'Large Poster (27" × 40")', width: 8100, height: 12000, unit: 'px', category: 'poster' },
+    { name: 'Movie Poster (27" × 41")', width: 8100, height: 12300, unit: 'px', category: 'poster' },
+    
+    // Digital Sizes
+    { name: 'HD (1920 × 1080)', width: 1920, height: 1080, unit: 'px', category: 'digital' },
+    { name: '4K (3840 × 2160)', width: 3840, height: 2160, unit: 'px', category: 'digital' },
+    { name: 'Square (12" × 12")', width: 3600, height: 3600, unit: 'px', category: 'digital' },
   ];
 
-  const [selectedSize, setSelectedSize] = useState<SizeOption>(sizeOptions[0]);
+  const [selectedCategory, setSelectedCategory] = useState<'document' | 'poster' | 'digital' | 'original'>('document');
+
+  const [selectedSize, setSelectedSize] = useState<SizeOption>(sizeOptions[1]); // Default to Letter
   const [previewUrl, setPreviewUrl] = useState<string>('');
+
+  const filteredOptions = selectedCategory === 'original' 
+    ? sizeOptions.filter(opt => opt.category === 'original')
+    : sizeOptions.filter(opt => opt.category === selectedCategory);
+
+  const categoryLabels = {
+    original: 'Original',
+    document: 'Documents',
+    poster: 'Posters',
+    digital: 'Digital',
+  };
 
   useEffect(() => {
     if (!isOpen || !svgString) return;
@@ -134,8 +166,27 @@ const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({
             {/* Left Column - Size Selection */}
             <div className="lg:col-span-1">
               <h3 className="text-lg font-semibold text-white mb-4">Select Size</h3>
+              
+              {/* Category Tabs */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {(['original', 'document', 'poster', 'digital'] as const).map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => setSelectedCategory(category)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                      selectedCategory === category
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
+                    }`}
+                  >
+                    {categoryLabels[category]}
+                  </button>
+                ))}
+              </div>
+              
+              {/* Size Options */}
               <div className="space-y-2">
-                {sizeOptions.map((option) => (
+                {filteredOptions.map((option) => (
                   <button
                     key={option.name}
                     onClick={() => setSelectedSize(option)}

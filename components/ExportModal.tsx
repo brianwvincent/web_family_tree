@@ -154,6 +154,14 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, nodes, links
     }
   };
 
+  const handleExportAsImage = () => {
+    const svgData = familyTreeRef.current?.getSVGData();
+    if (svgData) {
+      setCurrentSvgData(svgData);
+      setIsPrintPreviewOpen(true);
+    }
+  };
+
   const handlePrintPreviewDownload = (format: 'svg' | 'png' | 'pdf', width: number, height: number) => {
     if (!currentSvgData) return;
 
@@ -434,28 +442,12 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, nodes, links
                   {/* Images Section */}
                   <div>
                     <h3 className="text-sm font-semibold text-gray-300 mb-2 uppercase tracking-wide">Images</h3>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        onClick={handleDownloadSVG}
-                        className="flex items-center justify-center px-4 py-3 bg-sky-600/80 hover:bg-sky-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
-                      >
-                        <DownloadIcon className="w-5 h-5 mr-2" />
-                        SVG
-                      </button>
-                      <button
-                        onClick={handleDownloadPNG}
-                        className="flex items-center justify-center px-4 py-3 bg-purple-600/80 hover:bg-purple-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
-                      >
-                        <DownloadIcon className="w-5 h-5 mr-2" />
-                        PNG
-                      </button>
-                    </div>
                     <button
-                      onClick={handleDownloadPDF}
-                      className="w-full flex items-center justify-center px-4 py-3 bg-red-600/80 hover:bg-red-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300 mt-3"
+                      onClick={handleExportAsImage}
+                      className="w-full flex items-center justify-center px-4 py-3 bg-purple-600/80 hover:bg-purple-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
                     >
                       <DownloadIcon className="w-5 h-5 mr-2" />
-                      PDF
+                      Export as Image
                     </button>
                   </div>
 
