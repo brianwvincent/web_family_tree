@@ -281,39 +281,60 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
       const wrapText = (textElement: d3.Selection<SVGTextElement, BlockNode, SVGGElement, unknown>, maxWidth: number) => {
         const text = textElement.node();
         if (!text) return;
-        const words = text.textContent?.split(/\s+/) || [];
+        const originalText = text.textContent || '';
+        const words = originalText.split(/\s+/).filter(w => w);
+        
+        if (words.length === 0) return;
+        
         text.textContent = '';
 
+        let lines: string[] = [];
         let line: string[] = [];
-        let lineNumber = 0;
-        const lineHeight = 1.1;
-        const y = parseFloat(textElement.attr('y'));
-        const dy = parseFloat(textElement.attr('dy'));
+        const maxLines = 2;
 
-        words.forEach((word) => {
+        // Build lines
+        for (let i = 0; i < words.length; i++) {
+          const word = words[i];
           line.push(word);
           text.textContent = line.join(' ');
+          
           if (text.getComputedTextLength() > maxWidth && line.length > 1) {
             line.pop();
-            const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-            tspan.setAttribute('x', textElement.attr('x'));
-            tspan.setAttribute('y', String(y));
-            tspan.setAttribute('dy', `${lineNumber * lineHeight + dy}em`);
-            tspan.textContent = line.join(' ');
-            text.appendChild(tspan);
+            lines.push(line.join(' '));
+            
+            if (lines.length >= maxLines) {
+              // Truncate and add ellipsis
+              lines[lines.length - 1] += '...';
+              break;
+            }
+            
             line = [word];
-            lineNumber++;
           }
-        });
-
-        if (line.length > 0) {
-          const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-          tspan.setAttribute('x', textElement.attr('x'));
-          tspan.setAttribute('y', String(y));
-          tspan.setAttribute('dy', `${lineNumber * lineHeight + dy}em`);
-          tspan.textContent = line.join(' ');
-          text.appendChild(tspan);
         }
+
+        // Add remaining words if under max lines
+        if (line.length > 0 && lines.length < maxLines) {
+          lines.push(line.join(' '));
+        }
+
+        // Clear and rebuild with proper spacing
+        text.textContent = '';
+        const lineHeight = 1.2; // em units
+        const x = parseFloat(textElement.attr('x'));
+        const y = parseFloat(textElement.attr('y'));
+        
+        // Calculate starting position to vertically center all lines
+        const totalHeight = (lines.length - 1) * lineHeight;
+        const startDy = -totalHeight / 2;
+
+        lines.forEach((lineText, i) => {
+          const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+          tspan.setAttribute('x', String(x));
+          tspan.setAttribute('y', String(y));
+          tspan.setAttribute('dy', `${startDy + i * lineHeight}em`);
+          tspan.textContent = lineText;
+          text.appendChild(tspan);
+        });
       };
 
       // Draw links
@@ -386,7 +407,6 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
       const textElements = node.append("text")
         .attr("x", blockWidth / 2)
         .attr("y", blockHeight / 2)
-        .attr("dy", "0.35em")
         .attr("text-anchor", "middle")
         .attr("fill", "#0c4a6e")
         .attr("font-size", "14px")
@@ -589,11 +609,15 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
       const wrapText = (textElement: d3.Selection<SVGTextElement, ForceNode, SVGGElement, unknown>, maxWidth: number) => {
         textElement.each(function(d) {
           const text = d3.select(this);
+          const depth = nodeDepth.get(d.id) || 0;
+          // Use much smaller max width to ensure text fits within ellipse
+          // Ellipse rx is 75 for root, 60 for others, so use ~70% of that
+          const effectiveMaxWidth = depth === 0 ? 100 : 80;
           const words = d.id.split(/\s+/).reverse();
           let word: string | undefined;
           let line: string[] = [];
           let lineNumber = 0;
-          const lineHeight = 1.1;
+          const lineHeight = 1.0; // Reduced from 1.1 to fit more lines
           const y = text.attr("y");
           const dy = parseFloat(text.attr("dy") || "0");
           let tspan = text.text(null).append("tspan").attr("x", 0).attr("y", y).attr("dy", dy + "em");
@@ -602,15 +626,27 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
             line.push(word);
             tspan.text(line.join(" "));
             const tspanNode = tspan.node();
-            if (tspanNode && tspanNode.getComputedTextLength() > maxWidth) {
-              line.pop();
-              tspan.text(line.join(" "));
-              line = [word];
-              tspan = text.append("tspan")
-                .attr("x", 0)
-                .attr("y", y)
-                .attr("dy", ++lineNumber * lineHeight + dy + "em")
-                .text(word);
+            if (tspanNode && tspanNode.getComputedTextLength() > effectiveMaxWidth) {
+              // If it's a single word that's too long, truncate it
+              if (line.length === 1) {
+                let truncated = word;
+                while (truncated.length > 1) {
+                  truncated = truncated.slice(0, -1);
+                  tspan.text(truncated + '...');
+                  if (tspanNode.getComputedTextLength() <= effectiveMaxWidth) {
+                    break;
+                  }
+                }
+              } else {
+                line.pop();
+                tspan.text(line.join(" "));
+                line = [word];
+                tspan = text.append("tspan")
+                  .attr("x", 0)
+                  .attr("y", y)
+                  .attr("dy", ++lineNumber * lineHeight + dy + "em")
+                  .text(word);
+              }
             }
           }
           
@@ -634,7 +670,7 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
         })
         .style("font-size", d => {
           const depth = nodeDepth.get(d.id) || 0;
-          return depth === 0 ? "15px" : "14px";
+          return depth === 0 ? "13px" : "12px";
         })
         .style("font-weight", d => {
           const depth = nodeDepth.get(d.id) || 0;
@@ -820,11 +856,13 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
     const wrapText = (textElement: d3.Selection<SVGTextElement, d3.HierarchyNode<HierarchicalNode>, SVGGElement, unknown>, maxWidth: number) => {
       textElement.each(function(d) {
         const text = d3.select(this);
+        // Use much smaller max width to ensure text fits within ellipse (ellipse rx is 60)
+        const effectiveMaxWidth = 80;
         const words = d.data.id.split(/\s+/).reverse();
         let word: string | undefined;
         let line: string[] = [];
         let lineNumber = 0;
-        const lineHeight = 1.1; // ems
+        const lineHeight = 1.0; // Reduced from 1.1 to fit more lines
         const x = text.attr("x");
         const y = text.attr("y");
         const dy = parseFloat(text.attr("dy") || "0");
@@ -834,15 +872,27 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
           line.push(word);
           tspan.text(line.join(" "));
           const tspanNode = tspan.node();
-          if (tspanNode && tspanNode.getComputedTextLength() > maxWidth) {
-            line.pop();
-            tspan.text(line.join(" "));
-            line = [word];
-            tspan = text.append("tspan")
-              .attr("x", x)
-              .attr("y", y)
-              .attr("dy", ++lineNumber * lineHeight + dy + "em")
-              .text(word);
+          if (tspanNode && tspanNode.getComputedTextLength() > effectiveMaxWidth) {
+            // If it's a single word that's too long, truncate it
+            if (line.length === 1) {
+              let truncated = word;
+              while (truncated.length > 1) {
+                truncated = truncated.slice(0, -1);
+                tspan.text(truncated + '...');
+                if (tspanNode.getComputedTextLength() <= effectiveMaxWidth) {
+                  break;
+                }
+              }
+            } else {
+              line.pop();
+              tspan.text(line.join(" "));
+              line = [word];
+              tspan = text.append("tspan")
+                .attr("x", x)
+                .attr("y", y)
+                .attr("dy", ++lineNumber * lineHeight + dy + "em")
+                .text(word);
+            }
           }
         }
         
@@ -863,7 +913,7 @@ const FamilyTree = forwardRef<FamilyTreeApi, FamilyTreeProps>(({
       .attr("y", 0)
       .attr("text-anchor", "middle")
       .attr("fill", "#134e4a")
-      .style("font-size", "14px")
+      .style("font-size", "12px")
       .style("font-weight", "600")
       .each(function(d) {
         d3.select(this).text(d.data.id);

@@ -42,62 +42,16 @@ const App: React.FC = () => {
     }
   };
 
-  const handleFileUpload = useCallback((file: File) => {
+  const handleImport = useCallback((importedNodes: AppNode[], importedLinks: AppLink[]) => {
     setError(null);
     setSelectedNode(null);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const text = event.target?.result as string;
-      if (!text) {
-        setError("File is empty or could not be read.");
-        return;
-      }
-      try {
-        const rows = text.split('\n').filter(row => row.trim() !== '');
-        if (rows.length < 2) {
-            setError("CSV must have a header row and at least one data row.");
-            return;
-        }
-        const header = rows[0].trim().toLowerCase().split(',').map(h => h.replace(/"/g, '').trim());
-        const parentIndex = header.indexOf('parent');
-        const childIndex = header.indexOf('child');
+    setNodes(importedNodes);
+    setLinks(importedLinks);
+    setView('tree');
+  }, []);
 
-        if (parentIndex === -1 || childIndex === -1) {
-          const missingColumns = [];
-          if (parentIndex === -1) missingColumns.push('"parent"');
-          if (childIndex === -1) missingColumns.push('"child"');
-          setError(`Improperly formatted CSV: Missing required column(s): ${missingColumns.join(' and ')}. The CSV must have both "parent" and "child" columns.`);
-          return;
-        }
-
-        const newLinks: AppLink[] = [];
-        const nodeSet = new Set<string>();
-
-        for (let i = 1; i < rows.length; i++) {
-          const row = rows[i].split(',').map(h => h.trim().replace(/"/g, ''));
-          const parent = row[parentIndex];
-          const child = row[childIndex];
-
-          if (parent && child) {
-            newLinks.push({ source: parent, target: child });
-            nodeSet.add(parent);
-            nodeSet.add(child);
-          }
-        }
-        
-        const newNodes: AppNode[] = Array.from(nodeSet).map(id => ({ id }));
-        setNodes(newNodes);
-        setLinks(newLinks);
-        setView('tree');
-      } catch (e) {
-        setError("Failed to parse CSV file. Please check its format.");
-        console.error(e);
-      }
-    };
-    reader.onerror = () => {
-        setError("Error reading the file.");
-    }
-    reader.readAsText(file);
+  const handleError = useCallback((errorMessage: string) => {
+    setError(errorMessage);
   }, []);
 
   const handleManualAdd = useCallback((name: string, relationshipType?: 'parent' | 'child') => {
@@ -303,7 +257,7 @@ const App: React.FC = () => {
   }, [nodes, links]);
 
   if (view === 'landing') {
-    return <AppStartPage onFileUpload={handleFileUpload} onStartManual={handleStartManualAdd} error={error} />;
+    return <AppStartPage onImport={handleImport} onStartManual={handleStartManualAdd} onError={handleError} error={error} />;
   }
 
   return (
@@ -354,8 +308,9 @@ const App: React.FC = () => {
           )}
           
           <Controls 
-              onFileUpload={handleFileUpload}
+              onImport={handleImport}
               onManualAdd={handleManualAdd}
+              onError={handleError}
               isTreeVisible={nodes.length > 0}
           />
           {error && (
@@ -391,6 +346,7 @@ const App: React.FC = () => {
           <div className="mt-8 p-4 bg-gray-800/30 border border-gray-700/50 rounded-lg text-sm text-gray-400">
               <h3 className="font-semibold text-gray-200 mb-2">How to Use:</h3>
               <ul className="list-disc list-inside space-y-1">
+                  <li><span className="font-semibold">Import:</span> Upload CSV or GEDCOM (.ged) files to load your family tree.</li>
                   <li><span className="font-semibold">View Details:</span> Click a member to see their parent and children.</li>
                   <li><span className="font-semibold">Edit Name:</span> Change a member's name in the details panel.</li>
                   <li><span className="font-semibold">Search:</span> Find a family member using the search bar.</li>
@@ -473,7 +429,7 @@ const App: React.FC = () => {
             <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 p-8">
                   <Logo className="w-32 h-32 mb-6 opacity-20" />
                   <h2 className="text-2xl font-semibold text-gray-400">Your Family Tree Awaits</h2>
-                  <p className="mt-2 max-w-md">Get started by adding a family member or uploading a CSV file using the controls on the left.</p>
+                  <p className="mt-2 max-w-md">Get started by adding a family member or importing a CSV or GEDCOM file using the controls on the left.</p>
               </div>
           )}
         </main>

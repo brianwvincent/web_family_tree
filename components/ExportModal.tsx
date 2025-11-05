@@ -149,39 +149,8 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, nodes, links
   const handleDownloadPDF = () => {
     const svgData = familyTreeRef.current?.getSVGData();
     if (svgData) {
-      const { svgString, width, height } = svgData;
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      const img = new Image();
-      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-      const url = URL.createObjectURL(svgBlob);
-
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0, width, height);
-        URL.revokeObjectURL(url);
-        
-        // Convert canvas to image data
-        const imgData = canvas.toDataURL('image/png');
-        
-        // Create PDF with appropriate dimensions
-        const pdf = new jsPDF({
-          orientation: width > height ? 'landscape' : 'portrait',
-          unit: 'px',
-          format: [width, height]
-        });
-        
-        pdf.addImage(imgData, 'PNG', 0, 0, width, height);
-        pdf.save('family-tree.pdf');
-      };
-      img.onerror = () => {
-        console.error("Error loading SVG image for PDF conversion.");
-        URL.revokeObjectURL(url);
-      };
-      img.src = url;
+      setCurrentSvgData(svgData);
+      setIsPrintPreviewOpen(true);
     }
   };
 
@@ -444,13 +413,22 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, nodes, links
                   {/* File Formats Section */}
                   <div>
                     <h3 className="text-sm font-semibold text-gray-300 mb-2 uppercase tracking-wide">File Formats</h3>
-                    <button
-                      onClick={handleDownloadCSV}
-                      className="w-full flex items-center justify-center px-4 py-3 bg-emerald-600/80 hover:bg-emerald-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
-                    >
-                      <DownloadIcon className="w-5 h-5 mr-2" />
-                      CSV
-                    </button>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={handleDownloadCSV}
+                        className="flex items-center justify-center px-4 py-3 bg-emerald-600/80 hover:bg-emerald-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
+                      >
+                        <DownloadIcon className="w-5 h-5 mr-2" />
+                        CSV
+                      </button>
+                      <button
+                        onClick={handleDownloadGEDCOM}
+                        className="flex items-center justify-center px-4 py-3 bg-orange-600/80 hover:bg-orange-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
+                      >
+                        <DownloadIcon className="w-5 h-5 mr-2" />
+                        GEDCOM
+                      </button>
+                    </div>
                   </div>
 
                   {/* Images Section */}
@@ -482,18 +460,6 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, nodes, links
                   </div>
 
                   <div className="border-t border-gray-700/50 my-2"></div>
-
-                  {/* Premium Features Section */}
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-300 mb-2 uppercase tracking-wide">Premium Formats</h3>
-                    <button
-                      onClick={handleDownloadGEDCOM}
-                      className="w-full flex items-center justify-center px-4 py-3 bg-orange-600/80 hover:bg-orange-600 text-white font-semibold rounded-lg shadow-md transition-all duration-300"
-                    >
-                      <DownloadIcon className="w-5 h-5 mr-2" />
-                      GEDCOM
-                    </button>
-                  </div>
 
                   {/* AI Images Section */}
                   <div>
